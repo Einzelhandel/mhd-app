@@ -39,8 +39,10 @@ export default [
       const zeilen = (await h.protokoll(QUARK)).length;
       await h.oeffneAusListe('pruefen', QUARK);
       s.verzoegere(17000, { nur: 'mhd_aktion' });
+      let tKlick;
       try {
         await h.knopf('Geprüft', '.ansicht-artikel');
+        tKlick = Date.now();
         h.pruefe(await c.werte(() => [...document.querySelectorAll('.ansicht-artikel .bereich button')].every((b) => b.disabled)), 'Knöpfe gesperrt, solange der Aufruf läuft');
         const t0 = Date.now();
         await c.warteAuf((t) => document.getElementById('meldung').textContent === t, { text: 'Meldung nach der Zeitgrenze', ms: 20000 }, KEINE_VERBINDUNG);
@@ -50,16 +52,20 @@ export default [
         h.gleich(await h.ansicht(), 'artikel', 'bleibt im Artikel');
         h.gleich(await c.werte(() => [...document.querySelectorAll('.ansicht-artikel .bereich button')].map((b) => b.disabled)), [false, false, false], 'Knöpfe wieder bedienbar');
         await h.foto('zeitgrenze');
-        // Die Anfrage war schon beim Server; er führt sie noch aus. Abwarten, damit das nächste Szenario sauber beginnt.
-        const ende = Date.now() + 8000;
-        while (Date.now() < ende && (await h.protokoll(QUARK)).length === zeilen) await c.pause(200);
-        h.gleich((await h.protokoll(QUARK)).length, zeilen + 1, 'DB: die abgebrochene Aktion kam trotzdem an (ob sie gespeichert ist, zeigt danach die Liste)');
+        // Ob der Server die abgebrochene Anfrage noch ausführt, hängt davon ab, wie weit sie schon gelesen war (wie im
+        // echten Netz). Abwarten, bis die Bremse des Servers vorbei ist, damit das nächste Szenario sauber beginnt.
+        while (Date.now() - tKlick < 18000) await c.pause(200);
+        const spaet = (await h.protokoll(QUARK)).length - zeilen;
+        h.pruefe(spaet === 0 || spaet === 1, 'DB: die abgebrochene Aktion höchstens einmal gespeichert', spaet);
+        h.notiz(spaet ? 'Die abgebrochene Aktion kam trotzdem beim Server an.' : 'Die abgebrochene Aktion kam nicht beim Server an.');
       } finally {
         s.verzoegere(0);
       }
+      const vorher = (await h.protokoll(QUARK)).length;
       await h.knopf('Geprüft', '.ansicht-artikel');
       await h.warteListe();
       h.gleich(await h.hinweis(), 'Geprüft.', 'derselbe Knopf funktioniert danach wieder');
+      h.gleich((await h.protokoll(QUARK)).length, vorher + 1, 'DB: eine Protokollzeile mehr');
     },
   },
 ];
