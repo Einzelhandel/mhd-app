@@ -5,6 +5,9 @@
 //   POST /auth/v1/token|logout         wie GoTrue (Konto „demo“, Passwort „test“)
 //   GET  /off/api/v2/product/<EAN>     wie Open Food Facts, mit den Demo-Artikeln
 //   POST /test/heute, /test/jetzt      setzen mhd.heute() / mhd.jetzt() für Browser-Tests
+//   GET  /test/leer                    leere Seite derselben Herkunft (zum Aufräumen des Browser-Speichers, ohne die App zu laden)
+//   verzoegere(ms, { nur })            (nur im Prozess) bremst /rest und /auth, um einen langsamen Server nachzustellen;
+//                                      mit `nur` (Teil des Pfads, z. B. 'mhd_pin_abmelden') nur diese Aufrufe
 // Ausgeliefert wird docs/ unter /. Geändert werden nur config.js (SUPABASE_URL, OFF_URL und der Schlüssel
 // zeigen auf diesen Server) und im Meta der Content-Security-Policy das Ziel connect-src (→ 'self').
 // Der Server hört nur auf 127.0.0.1, weil die /test/*-Adressen ohne Anmeldung arbeiten.
@@ -176,6 +179,7 @@ export async function starteServer({ port = 0 } = {}) {
     return { typ, inhalt };
   }
 
+  let verzoegerung = { ms: 0, nur: null };
   const lesen = (anfrage) => new Promise((ok, fehler) => {
     const teile = [];
     anfrage.on('data', (t) => teile.push(t));
@@ -205,6 +209,9 @@ export async function starteServer({ port = 0 } = {}) {
     };
     const bearer = () => /^Bearer (\S+)$/.exec(anfrage.headers.authorization ?? '')?.[1];
     try {
+      if (verzoegerung.ms && (pfad.startsWith('/rest/') || pfad.startsWith('/auth/')) && (!verzoegerung.nur || pfad.includes(verzoegerung.nur))) {
+        await new Promise((ok) => setTimeout(ok, verzoegerung.ms));
+      }
       if (pfad.startsWith('/rest/v1/rpc/') && anfrage.method === 'POST') {
         const nutzer = zugriff.get(bearer());
         if (!nutzer) { await lesen(anfrage); senden({ status: 401, json: { code: 'PGRST301', message: 'JWT invalid' } }); return; }
@@ -252,6 +259,11 @@ export async function starteServer({ port = 0 } = {}) {
         senden({ status: 204 });
         return;
       }
+      if (pfad === '/test/leer' && (anfrage.method === 'GET' || anfrage.method === 'HEAD')) {
+        antwort.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+        antwort.end(anfrage.method === 'HEAD' ? undefined : '<!doctype html><meta charset="utf-8"><link rel="icon" href="data:,"><title>leer</title>');
+        return;
+      }
       if (anfrage.method === 'GET' || anfrage.method === 'HEAD') {
         const datei = await seite(pfad, anfrage.headers.host ?? `127.0.0.1:${server.address().port}`);
         if (datei) {
@@ -273,6 +285,7 @@ export async function starteServer({ port = 0 } = {}) {
     url: `http://127.0.0.1:${echterPort}`,
     port: echterPort,
     db,
+    verzoegere: (ms, { nur = null } = {}) => { verzoegerung = { ms, nur }; },
     stop: async () => { server.closeAllConnections?.(); await new Promise((ok) => server.close(ok)); await db.close(); },
   };
 }

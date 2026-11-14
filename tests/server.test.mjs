@@ -229,3 +229,40 @@ test('Host-Kopf: nur ein unauffälliger Host kommt in config.js, sonst localhost
     assert.doesNotMatch(text, /alert|evil/, boese);
   }
 });
+
+test('verzoegere(ms) bremst /rest und /auth, nicht die Seiten; 0 hebt es auf', async () => {
+  const t = await anmelden();
+  s.verzoegere(300);
+  try {
+    const t0 = Date.now();
+    assert.equal((await rpc('mhd_markt', {}, t.access_token)).status, 200);
+    assert.ok(Date.now() - t0 >= 280, `Antwort nach ${Date.now() - t0} ms`);
+    const t1 = Date.now();
+    assert.equal((await fetch(s.url + '/config.js')).status, 200);
+    assert.ok(Date.now() - t1 < 250, 'Seiten werden nicht gebremst');
+  } finally { s.verzoegere(0); }
+  const t2 = Date.now();
+  assert.equal((await rpc('mhd_markt', {}, t.access_token)).status, 200);
+  assert.ok(Date.now() - t2 < 250);
+});
+
+test('verzoegere(ms, { nur }) bremst nur die genannte Funktion', async () => {
+  const t = await anmelden();
+  s.verzoegere(300, { nur: 'mhd_pin_abmelden' });
+  try {
+    const t0 = Date.now();
+    assert.equal((await rpc('mhd_markt', {}, t.access_token)).status, 200);
+    assert.ok(Date.now() - t0 < 250, 'andere Aufrufe laufen ungebremst');
+    const t1 = Date.now();
+    await rpc('mhd_pin_abmelden', { p_sitzung: '00000000-0000-0000-0000-000000000000' }, t.access_token);
+    assert.ok(Date.now() - t1 >= 280, `Abmelden nach ${Date.now() - t1} ms`);
+  } finally { s.verzoegere(0); }
+});
+
+test('GET /test/leer liefert eine leere HTML-Seite ohne App', async () => {
+  const r = await fetch(s.url + '/test/leer');
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get('content-type'), /^text\/html/);
+  const html = await r.text();
+  assert.doesNotMatch(html, /script|main\.js/);
+});
