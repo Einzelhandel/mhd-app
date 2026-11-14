@@ -394,15 +394,61 @@ $$;
 -- Artikel und Warengruppen
 -- ---------------------------------------------------------------------------
 
--- Ein Artikel als JSON für die Oberfläche. abschnitt, versaeumt und seit_tagen
--- (Fachregeln aus Abschnitt 8 des Entwurfs) sind hier noch null; die Stufe mit
--- der Liste ersetzt diesen Funktionskörper bei gleicher Signatur.
+-- Ein Artikel als JSON für die Oberfläche, mit Abschnitt der Liste „Heute“
+-- (Fachregeln aus Abschnitt 8 des Entwurfs). Der nächste Termin wird bei jedem
+-- Lesen aus mhd.termin berechnet und nie gespeichert; letzte_aktion_am ist
+-- der Ausgangstag. Nur aktive Artikel gehören in die Liste.
+--   mit Bestand:  MHD vor heute            -> abgelaufen (versaeumt „abgelaufen“)
+--                 Termin vor heute         -> abgelaufen (versaeumt = Art des Termins)
+--                 Termin heute             -> Abschnitt = Art des Termins
+--   ohne Bestand: seit mehr als max_intervall_tage -> ohne_bestand
+-- Ohne Warengruppe gelten vorsichtshalber die Werte von „Sonstiges“ (7/3/30),
+-- damit ein Artikel nicht still aus der Liste fällt.
 create or replace function mhd.artikel_json(p_artikel mhd.artikel)
 returns jsonb
-language sql stable
+language plpgsql stable
 set search_path = ''
 as $$
-  select jsonb_build_object(
+declare
+  v_heute     date := mhd.heute();
+  v_pruef     int := 7;
+  v_reduzier  int := 3;
+  v_max       int := 30;
+  v_abschnitt text;
+  v_versaeumt text;
+  v_seit      int;
+  v_termin    record;
+begin
+  if p_artikel.warengruppe_id is not null then
+    select w.pruef_vorlauf_tage, w.reduzier_vorlauf_tage, w.max_intervall_tage
+      into v_pruef, v_reduzier, v_max
+      from mhd.warengruppen w where w.id = p_artikel.warengruppe_id;
+  end if;
+
+  if p_artikel.aktiv and p_artikel.bestand and p_artikel.mhd is not null then
+    if p_artikel.mhd < v_heute then
+      v_abschnitt := 'abgelaufen';
+      v_versaeumt := 'abgelaufen';
+      v_seit := v_heute - p_artikel.mhd;
+    else
+      select * into v_termin
+        from mhd.termin(p_artikel.mhd, coalesce(p_artikel.letzte_aktion_am, v_heute - 1),
+                        p_artikel.reduziert, v_pruef, v_reduzier, v_max);
+      if v_termin.datum < v_heute then
+        v_abschnitt := 'abgelaufen';
+        v_versaeumt := v_termin.art;
+        v_seit := v_heute - v_termin.datum;
+      elsif v_termin.datum = v_heute then
+        v_abschnitt := v_termin.art;
+      end if;
+    end if;
+  elsif p_artikel.aktiv and not p_artikel.bestand and p_artikel.ohne_bestand_seit is not null
+        and p_artikel.ohne_bestand_seit + v_max < v_heute then
+    v_abschnitt := 'ohne_bestand';
+    v_seit := v_heute - p_artikel.ohne_bestand_seit;
+  end if;
+
+  return jsonb_build_object(
     'id', p_artikel.id,
     'ean', p_artikel.ean,
     'name', p_artikel.name,
@@ -415,9 +461,10 @@ as $$
     'bestand', p_artikel.bestand,
     'reduziert', p_artikel.reduziert,
     'aktiv', p_artikel.aktiv,
-    'abschnitt', null,
-    'versaeumt', null,
-    'seit_tagen', null)
+    'abschnitt', v_abschnitt,
+    'versaeumt', v_versaeumt,
+    'seit_tagen', v_seit);
+end;
 $$;
 
 -- Die Warengruppen des Marktes mit ihren Vorlaufzeiten, nach Name.
@@ -565,6 +612,126 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------------
+-- Liste „Heute“ und Aktionen
+-- ---------------------------------------------------------------------------
+
+-- Das Protokoll kennt genau die fünf Aktionen (idempotent nachgezogen).
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'protokoll_art_check'
+                    and conrelid = 'mhd.protokoll'::regclass) then
+    alter table mhd.protokoll add constraint protokoll_art_check
+      check (art in ('geprueft', 'reduziert', 'aussortiert', 'ohne_bestand', 'ruht'));
+  end if;
+end;
+$$;
+
+-- Die Liste „Heute“: aktive Artikel des eigenen Marktes in fünf Abschnitten,
+-- je Artikel nur im obersten zutreffenden; sortiert nach Platz (leere zuletzt), dann Name.
+create or replace function public.mhd_liste(p_sitzung uuid)
+returns jsonb
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_m mhd.mitarbeiter := mhd.wer(p_sitzung);
+begin
+  return (
+    with t as (
+      select a.platz, a.name, a.id, mhd.artikel_json(a) as j
+        from mhd.artikel a
+       where a.markt_id = v_m.markt_id and a.aktiv)
+    select jsonb_build_object(
+      'heute', mhd.heute(),
+      'abschnitte', jsonb_build_object(
+        'abgelaufen',   coalesce(jsonb_agg(t.j order by t.platz nulls last, lower(t.name), t.name, t.id)
+                                 filter (where t.j ->> 'abschnitt' = 'abgelaufen'), '[]'::jsonb),
+        'laeuft_ab',    coalesce(jsonb_agg(t.j order by t.platz nulls last, lower(t.name), t.name, t.id)
+                                 filter (where t.j ->> 'abschnitt' = 'laeuft_ab'), '[]'::jsonb),
+        'pruefen',      coalesce(jsonb_agg(t.j order by t.platz nulls last, lower(t.name), t.name, t.id)
+                                 filter (where t.j ->> 'abschnitt' = 'pruefen'), '[]'::jsonb),
+        'reduzieren',   coalesce(jsonb_agg(t.j order by t.platz nulls last, lower(t.name), t.name, t.id)
+                                 filter (where t.j ->> 'abschnitt' = 'reduzieren'), '[]'::jsonb),
+        'ohne_bestand', coalesce(jsonb_agg(t.j order by t.platz nulls last, lower(t.name), t.name, t.id)
+                                 filter (where t.j ->> 'abschnitt' = 'ohne_bestand'), '[]'::jsonb)))
+      from t);
+end;
+$$;
+
+-- Eine Aktion am Artikel (jede zählt als Prüfung, setzt letzte_aktion_am auf heute
+-- und schreibt eine Protokollzeile):
+--   geprueft      p_mhd Pflicht (MHD_FEHLT); Bestand, Reduziert-Vermerk nur bei gleichem
+--                 MHD, ohne_bestand_seit leer, aktiv (holt auch einen ruhenden Artikel
+--                 und „wieder da“ zurück)
+--   reduziert     Bestand nötig (KEIN_BESTAND)
+--   aussortiert   mit p_mhd wie geprueft, aber nicht reduziert; ohne p_mhd: kein Bestand
+--   ohne_bestand  nur ohne Bestand (BESTAND_VORHANDEN): stellt die Frage neu
+--   ruht          nimmt den Artikel aus der Liste (aktiv = false)
+-- Es gilt der letzte Stand (keine Sperre gegen gleichzeitige Aktionen).
+create or replace function public.mhd_aktion(
+  p_sitzung uuid, p_artikel bigint, p_art text, p_mhd date default null)
+returns jsonb
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_m     mhd.mitarbeiter := mhd.wer(p_sitzung);
+  v_heute date := mhd.heute();
+  v_alt   mhd.artikel;
+  v_neu   mhd.artikel;
+begin
+  if p_art is null or p_art not in ('geprueft', 'reduziert', 'aussortiert', 'ohne_bestand', 'ruht') then
+    raise exception 'AKTION_UNGUELTIG';
+  end if;
+
+  select * into v_alt from mhd.artikel
+   where id = p_artikel and markt_id = v_m.markt_id
+   for update;
+  if v_alt.id is null then
+    raise exception 'ARTIKEL_UNBEKANNT';
+  end if;
+
+  if p_art = 'geprueft' and p_mhd is null then
+    raise exception 'MHD_FEHLT';
+  elsif p_art = 'reduziert' and not v_alt.bestand then
+    raise exception 'KEIN_BESTAND';
+  elsif p_art = 'ohne_bestand' and v_alt.bestand then
+    raise exception 'BESTAND_VORHANDEN';
+  end if;
+
+  if p_art = 'geprueft' or (p_art = 'aussortiert' and p_mhd is not null) then
+    update mhd.artikel
+       set mhd = p_mhd,
+           bestand = true,
+           reduziert = (p_art = 'geprueft' and v_alt.reduziert and v_alt.mhd is not distinct from p_mhd),
+           ohne_bestand_seit = null,
+           aktiv = true,
+           letzte_aktion_am = v_heute
+     where id = v_alt.id returning * into v_neu;
+  elsif p_art = 'reduziert' then
+    update mhd.artikel set reduziert = true, letzte_aktion_am = v_heute
+     where id = v_alt.id returning * into v_neu;
+  elsif p_art = 'aussortiert' then
+    update mhd.artikel
+       set bestand = false, mhd = null, reduziert = false,
+           ohne_bestand_seit = v_heute, letzte_aktion_am = v_heute
+     where id = v_alt.id returning * into v_neu;
+  elsif p_art = 'ohne_bestand' then
+    update mhd.artikel set ohne_bestand_seit = v_heute, letzte_aktion_am = v_heute
+     where id = v_alt.id returning * into v_neu;
+  else
+    update mhd.artikel set aktiv = false, letzte_aktion_am = v_heute
+     where id = v_alt.id returning * into v_neu;
+  end if;
+
+  insert into mhd.protokoll (markt_id, artikel_id, mitarbeiter_id, zeitpunkt, art, mhd_alt, mhd_neu)
+  values (v_m.markt_id, v_alt.id, v_m.id, mhd.jetzt(), p_art, v_alt.mhd, v_neu.mhd);
+
+  return mhd.artikel_json(v_neu);
+end;
+$$;
+
 revoke all on function mhd.pin_hash(text) from public, anon, authenticated;
 revoke all on function mhd.mein_markt() from public, anon, authenticated;
 revoke all on function mhd.wer(uuid) from public, anon, authenticated;
@@ -582,6 +749,10 @@ revoke all on function public.mhd_warengruppen(uuid) from public, anon, authenti
 revoke all on function public.mhd_artikel_suchen(uuid, text) from public, anon, authenticated;
 revoke all on function public.mhd_artikel_liste(uuid, text, boolean) from public, anon, authenticated;
 revoke all on function public.mhd_artikel_speichern(uuid, bigint, jsonb) from public, anon, authenticated;
+revoke all on function public.mhd_liste(uuid) from public, anon, authenticated;
+revoke all on function public.mhd_aktion(uuid, bigint, text, date) from public, anon, authenticated;
+grant execute on function public.mhd_liste(uuid) to authenticated;
+grant execute on function public.mhd_aktion(uuid, bigint, text, date) to authenticated;
 grant execute on function public.mhd_warengruppen(uuid) to authenticated;
 grant execute on function public.mhd_artikel_suchen(uuid, text) to authenticated;
 grant execute on function public.mhd_artikel_liste(uuid, text, boolean) to authenticated;
