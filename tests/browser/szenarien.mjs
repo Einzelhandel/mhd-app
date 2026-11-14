@@ -14,6 +14,7 @@ import anmeldung from './szenarien-anmeldung.mjs';
 import liste from './szenarien-liste.mjs';
 import leitung from './szenarien-leitung.mjs';
 import verlauf from './szenarien-verlauf.mjs';
+import verbindung from './szenarien-verbindung.mjs';
 
 if (!BROWSER) {
   console.error('Kein Chrome oder Edge gefunden. Der Browser-Test braucht einen von beiden (Chrome, Chromium oder Edge).');
@@ -24,7 +25,7 @@ const FOTOS = fileURLToPath(new URL('./fotos/', import.meta.url));
 const filter = (process.argv[2] ?? '').toLowerCase();
 const GRENZE_MS = 120000;
 
-const alle = [...anmeldung, ...liste, ...leitung, ...verlauf].sort((a, b) => a.nr - b.nr);
+const alle = [...anmeldung, ...liste, ...leitung, ...verlauf, ...verbindung].sort((a, b) => a.nr - b.nr);
 const gewaehlt = alle.filter((x) => !filter || x.name.toLowerCase().includes(filter));
 if (!gewaehlt.length) {
   console.error(`Kein Szenario passt zum Filter „${filter}“.`);

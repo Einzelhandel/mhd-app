@@ -232,7 +232,7 @@ Aktion und das MHD vorher und nachher. Wählen Sie den Zeitraum bei „Von“ un
 
 | Die App sagt | Was Sie tun |
 |---|---|
-| „Keine Verbindung. Bitte prüfe das Netz.“ | Prüfen Sie das WLAN oder den Empfang und tippen Sie auf „Erneut versuchen“. Ohne Netz geht die App nicht. |
+| „Keine Verbindung. Bitte prüfe das Netz.“ | Prüfen Sie das WLAN oder den Empfang und tippen Sie auf „Erneut versuchen“. Ohne Netz geht die App nicht. Die Meldung kommt auch, wenn 15 Sekunden lang keine Antwort kommt; die Aktion kann dann trotzdem gespeichert sein. Sehen Sie in der Liste nach, bevor Sie sie wiederholen. |
 | „Die Anmeldung des Marktes ist abgelaufen. Bitte neu anmelden.“ | Melden Sie sich mit dem Konto des Marktes neu an (Teil 2). |
 | „Konto oder Passwort stimmt nicht.“ | Konto und Passwort noch einmal prüfen. Bei der Marktleitung nachfragen. |
 | „Die PIN stimmt nicht.“ | Noch einmal versuchen. Nach fünf Fehlversuchen sind Sie 15 Minuten gesperrt. |

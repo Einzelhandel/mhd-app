@@ -5,6 +5,7 @@
 //   POST /auth/v1/token|logout         wie GoTrue (Konto „demo“, Passwort „test“)
 //   GET  /off/api/v2/product/<EAN>     wie Open Food Facts, mit den Demo-Artikeln
 //   POST /test/heute, /test/jetzt      setzen mhd.heute() / mhd.jetzt() für Browser-Tests
+//   POST /test/token-ablauf            macht alle Zugriffs-Tokens ungültig (wie abgelaufen); Erneuern geht weiter
 //   GET  /test/leer                    leere Seite derselben Herkunft (zum Aufräumen des Browser-Speichers, ohne die App zu laden)
 //   verzoegere(ms, { nur })            (nur im Prozess) bremst /rest und /auth, um einen langsamen Server nachzustellen;
 //                                      mit `nur` (Teil des Pfads, z. B. 'mhd_pin_abmelden') nur diese Aufrufe
@@ -245,9 +246,17 @@ export async function starteServer({ port = 0 } = {}) {
       }
       const ean = /^\/off\/api\/v2\/product\/([0-9]+)$/.exec(pfad)?.[1];
       if (ean && anfrage.method === 'GET') { senden({ status: 200, json: await off(ean) }); return; }
+      // Nur JSON: ein Formular einer fremden Seite löst sonst ohne Rückfrage eine Anfrage aus.
+      if (pfad.startsWith('/test/') && anfrage.method === 'POST' && !/^application\/json/.test(anfrage.headers['content-type'] ?? '')) {
+        await lesen(anfrage); senden({ status: 415, json: { message: 'Nur application/json' } }); return;
+      }
+      if (pfad === '/test/token-ablauf' && anfrage.method === 'POST') {
+        await lesen(anfrage);
+        zugriff.clear(); // wie abgelaufene Tokens: RPC-Aufrufe bekommen 401, die Erneuerungs-Tokens gelten weiter
+        senden({ status: 204 });
+        return;
+      }
       if ((pfad === '/test/heute' || pfad === '/test/jetzt') && anfrage.method === 'POST') {
-        // Nur JSON: ein Formular einer fremden Seite löst sonst ohne Rückfrage eine Anfrage aus.
-        if (!/^application\/json/.test(anfrage.headers['content-type'] ?? '')) { await lesen(anfrage); senden({ status: 415, json: { message: 'Nur application/json' } }); return; }
         const body = await jsonBody();
         const heute = pfad === '/test/heute';
         const wert = body?.[heute ? 'datum' : 'zeit'] ?? null;

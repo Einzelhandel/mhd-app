@@ -72,7 +72,8 @@ export function wechsle(name, daten) {
 const OHNE_SITZUNG = new Set(['mhd_markt', 'mhd_pin_anmelden']);
 
 // Ruft eine mhd_-Funktion auf: Token des Markt-Kontos, bei den meisten Funktionen
-// zusätzlich die PIN-Sitzung als p_sitzung.
+// zusätzlich die PIN-Sitzung als p_sitzung. Ein abgelehntes Token (401) wird einmal still
+// erneuert (sitzung.mitToken); abgemeldet wird erst, wenn auch das nicht hilft.
 export async function mhdRpc(funktion, parameter = {}) {
   try {
     const p = { ...parameter };
@@ -81,7 +82,7 @@ export async function mhdRpc(funktion, parameter = {}) {
       if (!pin) throw new Error('PIN_ABGELAUFEN');
       p.p_sitzung = pin.sitzung;
     }
-    return await rpc(funktion, p, await sitzung.token());
+    return await sitzung.mitToken((token) => rpc(funktion, p, token));
   } catch (fehler) {
     const code = fehler.message;
     if (code === 'PIN_ABGELAUFEN') {

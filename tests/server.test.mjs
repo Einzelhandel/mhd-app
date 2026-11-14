@@ -134,6 +134,19 @@ test('Test-Steuerung: /test/heute und /test/jetzt setzen die Einstellungen und l
   assert.equal(r.status, 415);
 });
 
+test('Test-Steuerung: /test/token-ablauf – alte Tokens 401, Erneuern liefert ein gültiges Paar; nur JSON', async () => {
+  const t = await anmelden();
+  assert.equal((await rpc('mhd_markt', {}, t.access_token)).status, 200);
+  const fremd = await fetch(s.url + '/test/token-ablauf', { method: 'POST', headers: { 'content-type': 'text/plain' }, body: '{}' });
+  assert.equal(fremd.status, 415);
+  assert.equal((await rpc('mhd_markt', {}, t.access_token)).status, 200);
+  assert.equal((await post('/test/token-ablauf', {})).status, 204);
+  assert.equal((await rpc('mhd_markt', {}, t.access_token)).status, 401);
+  const neu = await post('/auth/v1/token?grant_type=refresh_token', { refresh_token: t.refresh_token });
+  assert.equal(neu.status, 200);
+  assert.equal((await rpc('mhd_markt', {}, neu.json.access_token)).status, 200);
+});
+
 test('demo_einrichten zweimal: gleiche Artikelzahl, Protokoll neu, Leitungs-PIN unverändert', async () => {
   const zaehle = async () => (await s.db.query(
     `select (select count(*)::int from mhd.artikel) as a, (select count(*)::int from mhd.protokoll) as p,
