@@ -92,7 +92,7 @@ ansichten['artikel-neu'] = async (wurzel, daten) => {
         meldung('Gespeichert.', 'ok');
         return;
       }
-      wechsle('artikel', { artikel, fokus: 'mhd' });
+      wechsle('artikel', { artikel, fokus: 'mhd', neu: true });
       meldung('Artikel angelegt. Jetzt das vorderste MHD eingeben.', 'ok');
     });
   }

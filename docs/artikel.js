@@ -2,7 +2,7 @@
 import { ansichten, wechsle, mhdRpc, serverHeute, ich } from './app.js';
 import { element, meldung, mitSperre, fehlertext, ausweg } from './hilfe.js';
 import { leseDatum, zeigeDatum } from './datum.js';
-import { schritte, DATUM_FEHLER } from './artikel-aktion.js';
+import { schritte, panelArt, DATUM_FEHLER } from './artikel-aktion.js';
 import { statusText } from './liste.js';
 
 const HINWEISE = {
@@ -110,8 +110,19 @@ ansichten.artikel = async (wurzel, daten) => {
   }
 
   function zeigeHaupt() {
-    const ohneBestand = !a.bestand;
-    if (a.aktiv === false || ohneBestand) {
+    const art = panelArt(a, daten.neu);
+    if (art === 'neu') {
+      // Gerade angelegt (und im Markt gescannt): nur das MHD der vordersten Ware fehlt.
+      const feld = datumFeld('Vorderstes MHD', null);
+      const speichern = () => {
+        const iso = feld.lies();
+        if (iso) pruefeAbgelaufen(iso, () => aktion('geprueft', iso, 'MHD gespeichert.'));
+      };
+      zeigePanel([element('p', { class: 'frage' }, 'Neuer Artikel – bitte das vorderste MHD eingeben.'), feld.zeile],
+        [knopf('MHD speichern', speichern, 'haupt')], speichern);
+      return;
+    }
+    if (art === 'ohne_bestand') {
       const feld = datumFeld('MHD der vordersten Ware', null);
       const wiederDa = () => {
         const iso = feld.lies();

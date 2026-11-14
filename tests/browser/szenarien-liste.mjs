@@ -123,14 +123,24 @@ export default [
       let a = await h.artikel('Testbrot');
       h.gleich([a.ean, a.quelle, a.gruppe, a.bestand], ['4000000000006', 'hand', 'Backwaren', false], 'DB: Artikel angelegt');
 
-      // Ein neuer Artikel hat noch keinen Bestand: Das MHD der vordersten Ware kommt mit „Wieder da“.
+      // Ein neuer Artikel: Hinweis, ein Knopf „MHD speichern“, keine Knöpfe für „ohne Bestand“.
+      h.gleich(await h.text('.ansicht-artikel .frage'), 'Neuer Artikel – bitte das vorderste MHD eingeben.', 'Hinweis zum neuen Artikel');
+      h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern'], 'nur der Knopf „MHD speichern“');
+      h.pruefe(!(await h.text('.ansicht-artikel')).includes('Wieder da'), 'kein „Wieder da“');
+      await h.foto('neu-mhd');
       await h.mhdEintippen(tag(10));
-      await h.knopf('Wieder da', '.ansicht-artikel');
+      await h.knopf('MHD speichern', '.ansicht-artikel');
       await h.warteListe();
-      h.gleich(await h.hinweis(), 'Wieder da.', 'Bestätigung');
+      h.gleich(await h.hinweis(), 'MHD gespeichert.', 'Bestätigung');
       a = await h.artikel('Testbrot');
       h.gleich([a.mhd, a.bestand], [tag(10), true], 'DB: MHD gespeichert, Bestand');
       h.gleich((await h.protokoll('Testbrot')).map((p) => [p.art, p.mhd_neu, p.mitarbeiter]), [['geprueft', tag(10), 'Anna']], 'DB: Protokollzeile');
+      // Zurück führt nicht ins Formular oder zum fertigen Artikel (die Liste ist die erste Stelle des Verlaufs).
+      const v = await h.c.verlauf();
+      h.pruefe(!/^http:\/\/127\.0\.0\.1:\d+\/$/.test(v.entries[v.currentIndex - 1]?.url ?? ''), 'vor der Liste liegt kein weiterer App-Eintrag');
+      h.pruefe(await c.zurueck(), 'Zurück-Schritt möglich');
+      await c.pause(300);
+      h.gleich(await h.anzahl('.ansicht-artikel, .ansicht-artikel-neu'), 0, 'Zurück führt nicht in Artikel oder Formular');
     },
   },
   {

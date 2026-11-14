@@ -1,7 +1,7 @@
 // Welche Aufrufe gehören zu „Geprüft“ und „Reduziert“, je nach Eingabe im MHD-Feld (reine Logik).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { schritte, DATUM_FEHLER } from '../docs/artikel-aktion.js';
+import { schritte, panelArt, DATUM_FEHLER } from '../docs/artikel-aktion.js';
 
 const HEUTE = '2026-11-14';
 const artikel = { id: 1, bestand: true, mhd: '2026-11-20' };
@@ -38,4 +38,13 @@ test('Reduziert mit ungültigem Datum: Fehler, nichts wird gesendet', () => {
 test('Fehler und Schrittliste lassen sich unterscheiden', () => {
   assert.ok(Array.isArray(schritte('reduziert', '20.11.26', artikel, HEUTE)));
   assert.equal(Array.isArray(schritte('reduziert', 'x', artikel, HEUTE)), false);
+});
+
+test('panelArt: neu angelegt nur „neu“, sonst nach Bestand und Sortiment', () => {
+  assert.equal(panelArt({ bestand: false, aktiv: true }, true), 'neu');
+  assert.equal(panelArt({ bestand: false, aktiv: true }, false), 'ohne_bestand');
+  assert.equal(panelArt({ bestand: false, aktiv: true }), 'ohne_bestand');
+  assert.equal(panelArt({ bestand: false, aktiv: false }, true), 'ohne_bestand');
+  assert.equal(panelArt({ bestand: true, aktiv: true }, true), 'bestand');
+  assert.equal(panelArt({ bestand: true, aktiv: false }), 'ohne_bestand');
 });
