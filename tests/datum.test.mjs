@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { leseDatum, zeigeDatum } from '../docs/datum.js';
+import { leseDatum, zeigeDatum, ueberschriftHeute, geraeteTag, neuerTag } from '../docs/datum.js';
 
 const HEUTE = '2026-11-16';
 
@@ -25,4 +25,26 @@ test('leseDatum: Ergänzungen', () => {
 
 test('zeigeDatum', () => {
   assert.equal(zeigeDatum('2026-11-20'), '20.11.26');
+});
+
+test('ueberschriftHeute: Wochentag und Datum des Servers', () => {
+  assert.equal(ueberschriftHeute('2026-11-16'), 'Heute, Mo 16.11.');
+  assert.equal(ueberschriftHeute('2026-11-17'), 'Heute, Di 17.11.');
+  assert.equal(ueberschriftHeute('2026-11-22'), 'Heute, So 22.11.');
+  assert.equal(ueberschriftHeute('2027-01-01'), 'Heute, Fr 01.01.');
+  assert.equal(ueberschriftHeute('2028-02-29'), 'Heute, Di 29.02.');
+});
+
+test('geraeteTag: Datum der Geräteuhr in Europe/Berlin, auch über Mitternacht und Sommerzeit', () => {
+  assert.equal(geraeteTag(new Date('2026-11-16T22:59:59Z')), '2026-11-16'); // 23:59:59 Winterzeit
+  assert.equal(geraeteTag(new Date('2026-11-16T23:00:00Z')), '2026-11-17'); // 00:00 Winterzeit
+  assert.equal(geraeteTag(new Date('2026-07-01T21:59:59Z')), '2026-07-01'); // 23:59:59 Sommerzeit
+  assert.equal(geraeteTag(new Date('2026-07-01T22:00:00Z')), '2026-07-02');
+  assert.match(geraeteTag(), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test('neuerTag: nur wenn das Gerät seit dem letzten Laden einen anderen Tag hat', () => {
+  assert.equal(neuerTag('2026-11-16', '2026-11-16'), false);
+  assert.equal(neuerTag('2026-11-16', '2026-11-17'), true);
+  assert.equal(neuerTag(null, '2026-11-17'), false); // noch nicht geladen
 });

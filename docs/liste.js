@@ -1,7 +1,7 @@
 // Ansicht „Heute“: die fünf Abschnitte der Tagesliste.
 import { ansichten, wechsle, gibtAnsicht, mhdRpc, ich, stand, abmelden } from './app.js';
 import { element, meldung, fehlertext, ausweg } from './hilfe.js';
-import { zeigeDatum } from './datum.js';
+import { zeigeDatum, ueberschriftHeute, geraeteTag, neuerTag } from './datum.js';
 import { installBereich } from './app-installieren.js';
 
 // Feste Reihenfolge der Abschnitte (die Datenbank liefert die Schlüssel alphabetisch).
@@ -57,12 +57,18 @@ function zeigeAbschnitte(inhalt, daten) {
   inhalt.replaceChildren(...teile);
 }
 
-let aktiv = null; // { wurzel, laden } der gerade angezeigten Liste
+let aktiv = null; // { wurzel, laden, geraetTag } der gerade angezeigten Liste; geraetTag: Tag des Geräts beim letzten Laden
 
 // Wird die Seite wieder sichtbar (Handy aus der Tasche, Wechsel der App), neu laden.
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && aktiv?.wurzel.isConnected) aktiv.laden();
 });
+
+// Bleibt der Bildschirm an, bemerkt die Liste den neuen Tag selbst: einmal pro Minute ein Blick auf die Uhr des
+// Geräts, ohne Serveraufruf (jeder Aufruf verlängert die PIN-Sitzung); nach Mitternacht genau einmal neu laden.
+setInterval(() => {
+  if (!document.hidden && aktiv?.wurzel.isConnected && neuerTag(aktiv.geraetTag, geraeteTag())) aktiv.laden();
+}, 60_000);
 
 ansichten.liste = (wurzel) => {
   const mitarbeiter = ich();
@@ -71,10 +77,12 @@ ansichten.liste = (wurzel) => {
 
   async function laden() {
     const mein = ++lauf;
+    eintrag.geraetTag = geraeteTag();
     try {
       const daten = await mhdRpc('mhd_liste');
       if (mein !== lauf || !wurzel.isConnected) return;
       stand.heute = daten.heute;
+      titel.textContent = ueberschriftHeute(daten.heute);
       meldung('');
       zeigeAbschnitte(inhalt, daten);
     } catch (fehler) {
@@ -86,8 +94,9 @@ ansichten.liste = (wurzel) => {
     }
   }
 
+  const titel = element('h1', {}, 'Heute');
   const kopf = element('header', { class: 'kopf' },
-    element('h1', {}, 'Heute'),
+    titel,
     element('span', { class: 'wer' }, mitarbeiter?.name),
     gibtAnsicht('protokoll') && mitarbeiter?.rolle === 'leitung' && element('button', { type: 'button', class: 'knopf klein', onclick: () => wechsle('protokoll') }, 'Protokoll'),
     gibtAnsicht('einstellungen') && mitarbeiter?.rolle === 'leitung' && element('button', { type: 'button', class: 'knopf klein', onclick: () => wechsle('einstellungen') }, 'Einstellungen'),
@@ -98,6 +107,7 @@ ansichten.liste = (wurzel) => {
     gibtAnsicht('suche') && element('button', { type: 'button', class: 'knopf haupt', onclick: () => wechsle('suche') }, 'Suche'));
 
   wurzel.append(kopf, installBereich(), inhalt, leiste);
-  aktiv = { wurzel, laden };
+  const eintrag = { wurzel, laden, geraetTag: null };
+  aktiv = eintrag;
   return laden();
 };

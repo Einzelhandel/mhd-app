@@ -15,7 +15,7 @@ export default [
       h.pruefe(await c.zurueck(), 'Zurück-Schritt möglich');
       await h.warteListe();
       h.gleich(await h.ansicht(), 'liste', 'Zurück aus dem Artikel führt zur Liste');
-      h.gleich(await h.text('.ansicht-liste h1'), 'Heute', 'Liste ist wieder da');
+      h.gleich(await h.text('.ansicht-liste h1'), 'Heute, Mo 16.11.', 'Liste ist wieder da');
 
       // Suche mit Text → Artikel → Zurück = Suche mit demselben Text
       await h.knopf('Suche', '.ansicht-liste');

@@ -90,8 +90,10 @@ Sie sehen das MHD und die Knöpfe.
 Der rote Abschnitt steht immer oben. Ein Artikel fällt nie von allein von der
 Liste. Er bleibt stehen, bis jemand etwas damit gemacht hat.
 
-Die Liste lädt sich neu, sobald Sie die App wieder öffnen, zum Beispiel nach dem
-Wechsel aus einer anderen App.
+Oben steht, für welchen Tag die Liste gilt, zum Beispiel „Heute, Mo 16.11.“. Die
+Liste lädt sich neu, sobald Sie die App wieder öffnen, zum Beispiel nach dem
+Wechsel aus einer anderen App. Bleibt der Bildschirm an, lädt sie sich spätestens
+eine Minute nach Mitternacht von selbst neu.
 
 ## 6. Die Knöpfe am Artikel
 

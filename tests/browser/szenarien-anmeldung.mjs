@@ -38,7 +38,7 @@ export default [
       await h.pinEingeben('1234');
       await h.warteListe();
       h.gleich(await h.texte('.ansicht-liste section.abschnitt h2'), UEBERSCHRIFTEN, 'fünf Abschnitte in fester Reihenfolge');
-      h.gleich(await h.text('.ansicht-liste h1'), 'Heute', 'Überschrift der Liste');
+      h.gleich(await h.text('.ansicht-liste h1'), 'Heute, Mo 16.11.', 'Überschrift der Liste mit dem Datum des Servers');
       h.gleich(await h.text('.ansicht-liste .wer'), 'Anna', 'angemeldet als');
       h.gleich((await h.mitarbeiter('Anna')).fehlversuche, 0, 'DB: Fehlversuche zurückgesetzt');
       h.gleich((await h.sitzungen('Anna')).length, 1, 'DB: genau eine Sitzung');

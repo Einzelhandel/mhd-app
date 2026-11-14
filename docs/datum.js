@@ -1,4 +1,4 @@
-// Datumseingabe: reine Logik, kein DOM. Intern immer ISO (JJJJ-MM-TT).
+// Datum: Eingabe, Anzeige und Tageswechsel. Reine Logik, kein DOM. Intern immer ISO (JJJJ-MM-TT).
 
 const zwei = (n) => String(n).padStart(2, '0');
 const TAG_MS = 86400000;
@@ -37,3 +37,21 @@ export function leseDatum(text, heuteIso) {
 export function zeigeDatum(isoDatum) {
   return `${isoDatum.slice(8, 10)}.${isoDatum.slice(5, 7)}.${isoDatum.slice(2, 4)}`;
 }
+
+const WOCHENTAGE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+
+// Überschrift der Liste mit dem Datum des Servers: '2026-11-16' → 'Heute, Mo 16.11.'
+export function ueberschriftHeute(isoDatum) {
+  const tag = WOCHENTAGE[new Date(`${isoDatum}T00:00:00Z`).getUTCDay()];
+  return `Heute, ${tag} ${isoDatum.slice(8, 10)}.${isoDatum.slice(5, 7)}.`;
+}
+
+// Das Datum der Geräteuhr in Europe/Berlin als ISO (nur, um einen Tageswechsel zu bemerken;
+// „heute“ für die Fachlogik kommt immer vom Server).
+const BERLIN = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' });
+export const geraeteTag = (zeit = new Date()) => BERLIN.format(zeit);
+
+// Ob seit dem letzten Laden der Liste auf dem Gerät ein neuer Tag begonnen hat. Verglichen wird mit dem Tag
+// des Geräts beim Laden (nicht mit dem Datum des Servers): Geht die Uhr des Geräts falsch, lädt die Liste
+// trotzdem genau einmal je Tageswechsel neu und nicht jede Minute.
+export const neuerTag = (geraetBeimLaden, geraetJetzt) => geraetBeimLaden != null && geraetJetzt !== geraetBeimLaden;

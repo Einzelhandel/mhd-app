@@ -208,6 +208,7 @@ export default [
       const { c } = h;
       await h.alsMitarbeiter('Anna');
       h.gleich(await h.namenIn('laeuft_ab'), [BUTTER], 'gestern „Läuft heute ab“: die Butter');
+      h.gleich(await h.text('.ansicht-liste h1'), 'Heute, Mo 16.11.', 'Überschrift vor dem Tageswechsel');
       h.pruefe(!(await h.namenIn('abgelaufen')).includes(BUTTER), 'Butter ist noch nicht abgelaufen');
 
       await h.setzeHeute(tag(1)); // Mitternacht ist vorbei; die Seite blieb offen
@@ -217,6 +218,7 @@ export default [
       await h.ruhe();
       const zeile = (await h.liste()).find((a) => a.schluessel === 'abgelaufen').zeilen.find((z) => z.name === BUTTER);
       h.gleich(zeile.status, 'abgelaufen seit 1 Tag', 'Status der Butter');
+      h.gleich(await h.text('.ansicht-liste h1'), 'Heute, Di 17.11.', 'Überschrift nach dem Tageswechsel');
       h.pruefe(!(await h.namenIn('laeuft_ab')).includes(BUTTER), 'Butter steht nicht mehr unter „Läuft heute ab“');
       const farben = await c.werte(() => {
         const sec = document.querySelector('.ansicht-liste section.abschnitt-abgelaufen');
