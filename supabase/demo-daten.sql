@@ -1,12 +1,16 @@
--- Demo-Daten: erfundener Demo-Markt mit Testartikeln. Nur für Demo und lokalen Test laden,
--- nie in eine Datenbank mit echten Daten. Die Datei ist beliebig oft ladbar.
+-- Demo-Daten: erfundener Demo-Markt mit Testartikeln. Nur für Demo und lokalen
+-- Test laden, nie in eine Datenbank mit echten Daten. Die Datei ist beliebig oft
+-- ladbar.
 --
--- Voraussetzung: supabase/schema.sql ist geladen und das Konto (E-Mail) existiert in Supabase Auth.
---   select mhd.demo_einrichten('demo@example.com', '<Leitungs-PIN>');   -- beim ersten Mal mit PIN
---   select mhd.demo_einrichten('demo@example.com');                     -- Zurücksetzen (z. B. täglich)
--- Das Zurücksetzen löscht Artikel und Protokoll des Demo-Markts (und nur dieses) und legt sie neu an;
--- Auch die Warengruppen stehen danach wieder auf den Startwerten. Sperren werden aufgehoben, die PIN von Anna und Ben ist danach wieder 1234. Die Leitungs-PIN ändert
--- sich nur, wenn p_leitung_pin gesetzt ist. Alle Daten sind relativ zu mhd.heute().
+-- Voraussetzung: supabase/schema.sql ist geladen und das Konto (E-Mail) existiert
+-- in Supabase Auth.
+--   select mhd.demo_einrichten('demo@example.com', '<Leitungs-PIN>');  -- erstes Mal
+--   select mhd.demo_einrichten('demo@example.com');    -- Zurücksetzen (z. B. täglich)
+-- Das Zurücksetzen löscht Artikel und Protokoll des Demo-Markts (und nur dieses)
+-- und legt sie neu an. Auch die Warengruppen stehen danach wieder auf den
+-- Startwerten. Sperren werden aufgehoben, die PIN von Anna und Ben ist danach
+-- wieder 1234. Die Leitungs-PIN ändert sich nur, wenn p_leitung_pin gesetzt ist.
+-- Alle Daten sind relativ zu mhd.heute().
 -- Produktnamen und Mengen sind die öffentlichen Angaben aus Open Food Facts.
 
 begin;

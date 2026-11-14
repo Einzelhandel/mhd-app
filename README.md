@@ -32,11 +32,12 @@ npm start
 `<organisation>` ist ein Platzhalter und durch die tatsächliche Adresse des
 Repositorys zu ersetzen.
 
-Der Server meldet `http://127.0.0.1:8123/`; ebenso geht `http://localhost:8123/`. Diese Adresse im Browser öffnen.
-Der Testserver führt die echte
-Oberfläche (`docs/`) gegen die echten SQL-Funktionen aus, in einer eingebauten
-Datenbank (PGlite) mit erfundenen Demo-Daten. Es wird nichts in die Cloud
-geschickt; der Server hört nur auf diesem Rechner. Beendet wird er mit Strg+C.
+Der Server meldet `http://127.0.0.1:8123/`; ebenso geht
+`http://localhost:8123/`. Diese Adresse im Browser öffnen. Der Testserver führt
+die echte Oberfläche (`docs/`) gegen die echten SQL-Funktionen aus, in einer
+eingebauten Datenbank (PGlite) mit erfundenen Demo-Daten. Es wird nichts in die
+Cloud geschickt; der Server hört nur auf diesem Rechner. Beendet wird er mit
+Strg+C.
 
 | Eingabe | Wert |
 |---|---|
@@ -58,10 +59,11 @@ Neustart des Servers ist alles wieder im Ausgangszustand.
 Die Kamera funktioniert im Browser nur über HTTPS oder über `localhost`. Am
 selben Rechner geht der Scan also: Der Browser-Test liest den Strichcode eines
 Demo-Artikels aus der künstlichen Kamera von Chrome über die mitgelieferte
-Bibliothek (mit einer echten Webcam nicht ausprobiert). Vom Handy im WLAN auf den
-Rechner zuzugreifen geht nicht (der Server hört nur lokal), ein Handy braucht die
-veröffentlichte HTTPS-Adresse. Ohne Kamera lässt sich jeder Strichcode auch eintippen; die
-Strichcodes der Demo-Artikel stehen in der Artikelansicht.
+Bibliothek (mit einer echten Webcam nicht ausprobiert). Vom Handy im WLAN auf
+den Rechner zuzugreifen geht nicht (der Server hört nur lokal), ein Handy
+braucht die veröffentlichte HTTPS-Adresse. Ohne Kamera lässt sich jeder
+Strichcode auch eintippen; die Strichcodes der Demo-Artikel stehen in der
+Artikelansicht.
 
 ## Tests
 
@@ -91,8 +93,9 @@ Browser ruft ausschließlich `SECURITY DEFINER`-Funktionen `public.mhd_*` auf
 (feste `search_path`-Einstellung, alle Namen voll qualifiziert), die Anmeldung,
 Rolle (Marktleitung, Mitarbeiter) und Markt serverseitig prüfen. Der Schlüssel in
 `docs/config.js` ist absichtlich öffentlich (der öffentliche Schlüssel, nie der
-`service_role`-Schlüssel). `tests/rechte.test.mjs` prüft jede `public.mhd_*`-Funktion
-auf Rechte und Marktgrenze: neue Funktionen müssen dort eingetragen werden.
+`service_role`-Schlüssel). `tests/rechte.test.mjs` prüft jede
+`public.mhd_*`-Funktion auf Rechte und Marktgrenze: neue Funktionen müssen dort
+eingetragen werden.
 
 Anmeldung in zwei Stufen:
 
@@ -140,21 +143,29 @@ Schritt prüfen.
 3. **Konto des Marktes anlegen:** im Dashboard unter Authentication, Users einen
    Benutzer `<konto>@example.com` mit Passwort anlegen. In der App wird nur der
    Teil vor dem `@` getippt (die App ergänzt `@example.com`; die Domain ist
-   reserviert und kann keine Post empfangen).
+   reserviert und kann keine Post empfangen). Das Passwort **lang und zufällig**
+   wählen (zum Beispiel 20 Zeichen aus einem Passwort-Generator): Wer es kennt,
+   kommt an alle Daten des Marktes; eingegeben wird es nur einmal je Gerät.
 4. **Schema laden:** den Inhalt von `supabase/schema.sql` im SQL-Editor ausführen.
    pgcrypto liegt bei Supabase im Schema `extensions`; die Datei erwartet das.
 5. **Markt mit erster Marktleitung anlegen** (im SQL-Editor):
 
    ```
-   select mhd.markt_anlegen('Marktname', '<konto>@example.com', 'Name der Leitung', '<PIN>');
+   select mhd.markt_anlegen('Marktname', '<konto>@example.com',
+                            'Name der Leitung', '<PIN>');
    ```
 
-   Die PIN besteht aus 4 bis 6 Ziffern. Weitere Mitarbeiter legt die
-   Marktleitung danach in der App an.
+   Die PIN besteht aus 4 bis 6 Ziffern; für die Marktleitung eine
+   **sechsstellige** PIN wählen (sie darf Mitarbeiter, PINs und Regeln ändern).
+   Weitere Mitarbeiter legt die Marktleitung danach in der App an.
 6. **Adresse und Schlüssel eintragen:** in `docs/config.js` `SUPABASE_URL` und
    `SUPABASE_KEY` ersetzen. Die Werte stehen im Projekt unter Project Settings,
    API Keys. Eingetragen wird der öffentliche Schlüssel („publishable“ bzw.
-   `anon`), **nie** der `service_role`-Schlüssel.
+   `anon`), **nie** der `service_role`-Schlüssel. Liegt die Datenbank nicht
+   unter einer Adresse `https://….supabase.co` (eigene Domain, selbst
+   betrieben), in `docs/index.html` in der Content-Security-Policy bei
+   `connect-src` diese Adresse statt `https://*.supabase.co` eintragen; sonst
+   blockiert der Browser jeden Aufruf.
 7. **Veröffentlichen:** bei GitHub Pages den Ordner `/docs` des Hauptzweigs
    einstellen. Die Adresse ist HTTPS, damit geht die Kamera auf dem Handy.
 
@@ -163,6 +174,21 @@ Außerdem:
 - `supabase/schema.sql` und `supabase/demo-daten.sql` lassen sich wiederholt
   ausführen. Ein Update der Datenbank ist die erneut ausgeführte Datei (bei
   geänderten Funktionsparametern vorher die alte Funktion löschen, siehe oben).
+- **PIN der einzigen Marktleitung vergessen:** im SQL-Editor die neue PIN
+  setzen (Marktname, Name der Leitung und neue PIN einsetzen). Das hebt auch
+  eine Sperre auf und setzt die Fehlversuche zurück:
+
+  ```
+  update mhd.mitarbeiter
+     set pin_hash = mhd.pin_hash('<neue PIN>'),
+         fehlversuche = 0, gesperrt_bis = null
+   where rolle = 'leitung' and name = '<Name der Leitung>'
+     and markt_id = (select id from mhd.maerkte where name = '<Marktname>');
+  ```
+
+  `mhd.pin_hash` prüft die PIN (4 bis 6 Ziffern) und speichert nur den Hash. Die
+  Anweisung ist gegen die eingebaute Datenbank der Tests ausprobiert, nicht
+  gegen Supabase.
 - **Weiteren Markt anlegen:** weiterer Benutzer im Dashboard, dann wieder
   `select mhd.markt_anlegen(...)`. Die Märkte sind in der Datenbank getrennt
   (jede Zeile trägt die Markt-Nummer).
@@ -234,6 +260,28 @@ Bekannte Grenzen der Fachlichkeit (Entwurf, Abschnitt 13):
 - Ob ein kostenloses Supabase-Projekt bei Inaktivität pausiert und was ein
   Bezahltarif kostet: nicht geprüft.
 - Das Verhalten bei schlechter Verbindung im Markt: nicht gemessen.
+- **Passwortänderung mit dem Token des Markt-Kontos** (`PUT /auth/v1/user`):
+  Lässt Supabase das zu, kann jeder mit den Zugangsdaten (oder mit einem
+  angemeldeten Gerät) das Passwort ändern und das Konto übernehmen. Beim ersten
+  Aufsetzen ausprobieren und, falls möglich, in Supabase unterbinden.
+- **Gemeinsame Anmeldung in mehreren Tabs** bzw. in Tab und installierter App
+  desselben Geräts: Beide teilen sich das Markt-Konto im Speicher des Browsers;
+  das Erneuerungs-Token gilt nur einmal. Ob sich zwei gleichzeitig erneuernde
+  Tabs gegenseitig abmelden: nicht geprüft.
+- **Laufzeit von `mhd_liste` bei großem Sortiment:** nur lokal in der
+  eingebauten Datenbank der Tests gemessen (1.000 Artikel etwa 150 ms, 5.000
+  Artikel etwa 750 ms je Aufruf), nicht gegen Supabase.
+- **Rechte in der echten Datenbank:** Der Rechte-Test läuft nur gegen
+  nachgebildete Rollen. Beim ersten Aufsetzen im SQL-Editor prüfen, dass
+  `has_function_privilege('anon', p.oid, 'execute')` für alle 13 Funktionen
+  `public.mhd_*` falsch ist, und dass ein selbst registriertes Konto ohne Markt
+  beim Aufruf `KEIN_ZUGRIFF` bekommt:
+
+  ```
+  select p.proname, has_function_privilege('anon', p.oid, 'execute') as anon
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname like 'mhd\_%' order by 1;
+  ```
 - Ob die Verwendung von Supabase und der Betrieb mit echten Marktdaten
   datenschutzrechtlich freigegeben ist (insbesondere ein
   Auftragsverarbeitungsvertrag): offen, nicht Teil dieser Prüfung.
