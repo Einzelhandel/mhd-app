@@ -1,0 +1,125 @@
+/* MHD-App: einspaltig, große Schrift und Knöpfe, Hauptknöpfe unten (eine Hand). */
+:root {
+  --gruen: #1B5E20;
+  --rot: #C62828;
+  --orange: #EF6C00;
+  --gelb: #F9A825;
+  --grau: #757575;
+  --text: #212121;
+  --grund: #F5F5F5;
+  --flaeche: #FFFFFF;
+  --linie: #BDBDBD;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 18px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--grund);
+}
+
+main { max-width: 640px; margin: 0 auto; padding: 0 12px 240px; }
+[hidden] { display: none !important; }
+
+h1 { font-size: 1.4rem; margin: 0; }
+h2 { font-size: 1.1rem; margin: 0; padding: 10px 12px; color: #fff; }
+
+/* Kopf */
+.kopf {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 12px 0;
+}
+.kopf h1 { flex: 1 1 auto; }
+.wer { color: var(--grau); }
+
+/* Knöpfe */
+.knopf {
+  min-height: 56px; padding: 8px 16px;
+  font: inherit; font-weight: 600;
+  color: var(--gruen); background: var(--flaeche);
+  border: 2px solid var(--gruen); border-radius: 10px;
+  cursor: pointer;
+}
+.knopf.haupt { color: #fff; background: var(--gruen); }
+.knopf.klein { min-height: 56px; font-weight: 500; }
+.knopf:disabled { opacity: 0.5; cursor: default; }
+.knopf:focus-visible, input:focus-visible, .zeile:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+
+.knopfliste { display: grid; gap: 10px; margin: 12px 0; }
+.knopf.mitarbeiter { text-align: left; font-size: 1.2rem; }
+
+/* Formulare */
+.formular { display: grid; gap: 8px; margin: 12px 0; }
+label { font-weight: 600; }
+input[type="text"], input[type="password"], input[type="search"] {
+  width: 100%; min-height: 56px; padding: 8px 12px;
+  font: inherit; font-size: 1.2rem;
+  border: 2px solid var(--linie); border-radius: 10px; background: var(--flaeche);
+}
+.schalter { display: flex; align-items: center; gap: 12px; min-height: 56px; font-weight: 400; }
+.schalter input { width: 28px; height: 28px; }
+.hinweis-text { color: var(--grau); margin: 4px 0; }
+.feldfehler { margin: 0; color: var(--rot); font-weight: 600; }
+
+/* Meldungen */
+.meldung {
+  position: sticky; top: 0; z-index: 5;
+  margin: 0; padding: 12px; font-weight: 600;
+  color: #fff; background: var(--rot);
+}
+.hinweis {
+  position: fixed; left: 12px; right: 12px; bottom: 90px; z-index: 6;
+  max-width: 616px; margin: 0 auto; padding: 12px 16px;
+  color: #fff; background: var(--gruen); border-radius: 10px; text-align: center; font-weight: 600;
+  pointer-events: none;
+}
+
+/* Liste */
+.abschnitt { margin: 14px 0; background: var(--flaeche); border-radius: 10px; overflow: hidden; }
+.abschnitt-abgelaufen h2 { background: var(--rot); }
+.abschnitt-laeuft_ab h2, .abschnitt-pruefen h2 { background: var(--orange); }
+.abschnitt-reduzieren h2 { background: var(--gelb); color: var(--text); }
+.abschnitt-ohne_bestand h2 { background: var(--grau); }
+
+.zeile {
+  display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 56px;
+  padding: 10px 12px; text-align: left; font: inherit; color: inherit;
+  background: var(--flaeche); border: 0; border-top: 1px solid var(--linie);
+  border-left: 8px solid var(--linie); cursor: pointer;
+}
+.zeile.abschnitt-abgelaufen { border-left-color: var(--rot); }
+.zeile.abschnitt-laeuft_ab, .zeile.abschnitt-pruefen { border-left-color: var(--orange); }
+.zeile.abschnitt-reduzieren { border-left-color: var(--gelb); }
+.zeile.abschnitt-ohne_bestand { border-left-color: var(--grau); }
+.inhalt > .zeile { margin: 8px 0; border: 1px solid var(--linie); border-left-width: 8px; border-radius: 10px; }
+.name { font-weight: 700; }
+.einzelheit { color: var(--grau); }
+.status { margin-left: 8px; color: var(--text); font-weight: 600; }
+.marke-ruht {
+  margin-left: 8px; padding: 2px 8px; font-size: 0.8rem; font-weight: 600;
+  color: #fff; background: var(--grau); border-radius: 6px; vertical-align: middle;
+}
+.leer { padding: 24px 0; text-align: center; color: var(--grau); }
+
+/* Artikel */
+.angaben { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0 0 12px; }
+.angaben dt { color: var(--grau); }
+.angaben dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.status-gross { margin: 8px 0; padding: 10px 12px; font-weight: 700; color: #fff; background: var(--grau); border-radius: 10px; }
+.status-gross.abschnitt-abgelaufen { background: var(--rot); }
+.status-gross.abschnitt-laeuft_ab, .status-gross.abschnitt-pruefen { background: var(--orange); }
+.status-gross.abschnitt-reduzieren { background: var(--gelb); color: var(--text); }
+.frage { font-weight: 700; margin: 8px 0; }
+
+/* Untere Leiste: Hauptknöpfe in Daumenreichweite */
+.leiste {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 4;
+  display: flex; flex-direction: column; gap: 8px; max-width: 640px; margin: 0 auto;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: var(--grund); border-top: 1px solid var(--linie);
+}
+.leiste .knopf { width: 100%; }
+.ansicht-liste .leiste { flex-direction: row; }
+.ansicht-liste .leiste .knopf { flex: 1; }
