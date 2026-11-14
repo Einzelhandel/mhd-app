@@ -390,6 +390,181 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------------
+-- Artikel und Warengruppen
+-- ---------------------------------------------------------------------------
+
+-- Ein Artikel als JSON für die Oberfläche. abschnitt, versaeumt und seit_tagen
+-- (Fachregeln aus Abschnitt 8 des Entwurfs) sind hier noch null; die Stufe mit
+-- der Liste ersetzt diesen Funktionskörper bei gleicher Signatur.
+create or replace function mhd.artikel_json(p_artikel mhd.artikel)
+returns jsonb
+language sql stable
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'id', p_artikel.id,
+    'ean', p_artikel.ean,
+    'name', p_artikel.name,
+    'marke', p_artikel.marke,
+    'menge', p_artikel.menge,
+    'platz', p_artikel.platz,
+    'warengruppe_id', p_artikel.warengruppe_id,
+    'warengruppe', (select w.name from mhd.warengruppen w where w.id = p_artikel.warengruppe_id),
+    'mhd', p_artikel.mhd,
+    'bestand', p_artikel.bestand,
+    'reduziert', p_artikel.reduziert,
+    'aktiv', p_artikel.aktiv,
+    'abschnitt', null,
+    'versaeumt', null,
+    'seit_tagen', null)
+$$;
+
+-- Die Warengruppen des Marktes mit ihren Vorlaufzeiten, nach Name.
+create or replace function public.mhd_warengruppen(p_sitzung uuid)
+returns jsonb
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_m mhd.mitarbeiter := mhd.wer(p_sitzung);
+begin
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+             'id', w.id,
+             'name', w.name,
+             'pruef_vorlauf_tage', w.pruef_vorlauf_tage,
+             'reduzier_vorlauf_tage', w.reduzier_vorlauf_tage,
+             'max_intervall_tage', w.max_intervall_tage) order by w.name, w.id)
+      from mhd.warengruppen w
+     where w.markt_id = v_m.markt_id), '[]'::jsonb);
+end;
+$$;
+
+-- Der Artikel zu einer EAN im eigenen Markt, sonst null.
+create or replace function public.mhd_artikel_suchen(p_sitzung uuid, p_ean text)
+returns jsonb
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_m mhd.mitarbeiter := mhd.wer(p_sitzung);
+  v_a mhd.artikel;
+begin
+  select * into v_a from mhd.artikel
+   where markt_id = v_m.markt_id and ean = btrim(p_ean);
+  if v_a.id is null then
+    return null;
+  end if;
+  return mhd.artikel_json(v_a);
+end;
+$$;
+
+-- Höchstens 50 Artikel des Marktes nach Name. Die Suche ignoriert Groß- und
+-- Kleinschreibung und sucht in Name, Marke und EAN (reiner Textvergleich,
+-- Platzhalterzeichen haben keine Wirkung). p_ohne_ean zeigt nur Artikel ohne EAN.
+create or replace function public.mhd_artikel_liste(
+  p_sitzung uuid, p_suche text default '', p_ohne_ean boolean default false)
+returns jsonb
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_m     mhd.mitarbeiter := mhd.wer(p_sitzung);
+  v_suche text := lower(btrim(coalesce(p_suche, '')));
+begin
+  return coalesce((
+    with t as (
+      select a from mhd.artikel a
+       where a.markt_id = v_m.markt_id
+         and (not coalesce(p_ohne_ean, false) or a.ean is null)
+         and (v_suche = ''
+              or position(v_suche in lower(a.name)) > 0
+              or position(v_suche in lower(coalesce(a.marke, ''))) > 0
+              or position(v_suche in coalesce(a.ean, '')) > 0)
+       order by lower(a.name), a.name, a.id
+       limit 50)
+    select jsonb_agg(mhd.artikel_json(t.a) order by lower((t.a).name), (t.a).name, (t.a).id) from t
+  ), '[]'::jsonb);
+end;
+$$;
+
+-- Legt einen Artikel an (p_id null) oder ändert ihn (p_id gesetzt).
+-- p_daten: { ean, name, marke, menge, platz, warengruppe_id, quelle }.
+-- Mit EAN darf jeder Mitarbeiter anlegen; ohne EAN anlegen und jedes Ändern nur
+-- die Marktleitung. Beim Ändern bleibt die EAN unverändert. Geprüft wird nur das
+-- Format der EAN (8 oder 13 Ziffern) und der Waagen-Code (erste Ziffer 2); die
+-- Prüfziffer prüft der Browser.
+create or replace function public.mhd_artikel_speichern(p_sitzung uuid, p_id bigint, p_daten jsonb)
+returns jsonb
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_m      mhd.mitarbeiter := mhd.wer(p_sitzung);
+  v_daten  jsonb := coalesce(p_daten, '{}'::jsonb);
+  v_ean    text := nullif(btrim(v_daten ->> 'ean'), '');
+  v_name   text := nullif(btrim(v_daten ->> 'name'), '');
+  v_quelle text := nullif(btrim(v_daten ->> 'quelle'), '');
+  v_wg     bigint := nullif(btrim(v_daten ->> 'warengruppe_id'), '')::bigint;
+  v_a      mhd.artikel;
+begin
+  if p_id is not null or v_ean is null then
+    v_m := mhd.leitung(p_sitzung);
+  end if;
+
+  if p_id is null and v_ean is not null then
+    if v_ean !~ '^([0-9]{8}|[0-9]{13})$' then
+      raise exception 'EAN_UNGUELTIG';
+    end if;
+    if left(v_ean, 1) = '2' then
+      raise exception 'WAAGENCODE';
+    end if;
+  end if;
+
+  if v_name is null then
+    raise exception 'NAME_FEHLT';
+  end if;
+  v_name := btrim(left(v_name, 120));
+
+  if v_quelle is not null and v_quelle not in ('off', 'hand') then
+    raise exception 'QUELLE_UNGUELTIG';
+  end if;
+
+  if v_wg is not null and not exists (
+       select 1 from mhd.warengruppen w where w.id = v_wg and w.markt_id = v_m.markt_id) then
+    raise exception 'WARENGRUPPE_UNBEKANNT';
+  end if;
+
+  if p_id is null then
+    begin
+      insert into mhd.artikel (markt_id, ean, name, marke, menge, platz, warengruppe_id, quelle, bestand, ohne_bestand_seit)
+      values (v_m.markt_id, v_ean, v_name,
+              nullif(btrim(v_daten ->> 'marke'), ''), nullif(btrim(v_daten ->> 'menge'), ''),
+              nullif(btrim(v_daten ->> 'platz'), ''), v_wg,
+              coalesce(v_quelle, 'hand'), false, mhd.heute())
+      returning * into v_a;
+    exception when unique_violation then
+      raise exception 'ARTIKEL_VORHANDEN';
+    end;
+  else
+    update mhd.artikel
+       set name = v_name,
+           marke = nullif(btrim(v_daten ->> 'marke'), ''),
+           menge = nullif(btrim(v_daten ->> 'menge'), ''),
+           platz = nullif(btrim(v_daten ->> 'platz'), ''),
+           warengruppe_id = v_wg,
+           quelle = coalesce(v_quelle, quelle)
+     where id = p_id and markt_id = v_m.markt_id
+     returning * into v_a;
+    if v_a.id is null then
+      raise exception 'ARTIKEL_UNBEKANNT';
+    end if;
+  end if;
+  return mhd.artikel_json(v_a);
+end;
+$$;
+
 revoke all on function mhd.pin_hash(text) from public, anon, authenticated;
 revoke all on function mhd.mein_markt() from public, anon, authenticated;
 revoke all on function mhd.wer(uuid) from public, anon, authenticated;
@@ -402,5 +577,14 @@ grant execute on function public.mhd_pin_anmelden(bigint, text) to authenticated
 grant execute on function public.mhd_pin_abmelden(uuid) to authenticated;
 revoke all on function mhd.markt_anlegen(text, text, text, text) from public, anon, authenticated;
 revoke all on function mhd.termin(date, date, boolean, int, int, int) from public, anon, authenticated;
+revoke all on function mhd.artikel_json(mhd.artikel) from public, anon, authenticated;
+revoke all on function public.mhd_warengruppen(uuid) from public, anon, authenticated;
+revoke all on function public.mhd_artikel_suchen(uuid, text) from public, anon, authenticated;
+revoke all on function public.mhd_artikel_liste(uuid, text, boolean) from public, anon, authenticated;
+revoke all on function public.mhd_artikel_speichern(uuid, bigint, jsonb) from public, anon, authenticated;
+grant execute on function public.mhd_warengruppen(uuid) to authenticated;
+grant execute on function public.mhd_artikel_suchen(uuid, text) to authenticated;
+grant execute on function public.mhd_artikel_liste(uuid, text, boolean) to authenticated;
+grant execute on function public.mhd_artikel_speichern(uuid, bigint, jsonb) to authenticated;
 
 commit;
