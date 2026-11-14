@@ -106,6 +106,23 @@ test('Mitarbeiter eines anderen Marktes ist unbekannt; Rolle und Name müssen g�
   assert.deepEqual((await b.liste()).map((x) => x.name), ['Berta', 'Chef']);
 });
 
+test('Namen von Mitarbeitern und Warengruppen: höchstens 40 Zeichen, sonst NAME_FEHLT; die Tabellen lehnen Längeres ab', async () => {
+  const u = await umgebung();
+  const regel = (name) => ({ name, pruef_vorlauf_tage: 3, reduzier_vorlauf_tage: 2, max_intervall_tage: 30 });
+  const vierzig = 'A'.repeat(40);
+  const id = await u.speichern(null, { name: ` ${vierzig} `, rolle: 'mitarbeiter', aktiv: true, pin: '1111' });
+  assert.equal((await u.zeile(id)).name, vierzig);
+  await assert.rejects(u.speichern(null, { name: 'B'.repeat(41), rolle: 'mitarbeiter', aktiv: true, pin: '1111' }), /NAME_FEHLT/);
+  await assert.rejects(u.speichern(id, { name: 'C'.repeat(41), rolle: 'mitarbeiter', aktiv: true }), /NAME_FEHLT/);
+  assert.equal((await u.zeile(id)).name, vierzig);
+  const gruppe = await u.gruppeSpeichern(null, regel(vierzig));
+  assert.equal((await u.gruppe(vierzig)).id, gruppe);
+  await assert.rejects(u.gruppeSpeichern(null, regel('D'.repeat(41))), /NAME_FEHLT/);
+  await assert.rejects(u.gruppeSpeichern(gruppe, regel('E'.repeat(41))), /NAME_FEHLT/);
+  await assert.rejects(u.db.query('update mhd.mitarbeiter set name = $1 where id = $2', ['F'.repeat(41), id]), /check/);
+  await assert.rejects(u.db.query('update mhd.warengruppen set name = $1 where id = $2', ['G'.repeat(41), gruppe]), /check/);
+});
+
 test('deaktivierter Mitarbeiter verliert seine Sitzung (PIN_ABGELAUFEN) und kann sich nicht anmelden', async () => {
   const u = await umgebung();
   assert.equal((await u.gruppen(u.sitzung)).length, 11);

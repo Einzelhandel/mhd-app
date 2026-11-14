@@ -2,7 +2,9 @@
 import { OFF_URL } from './config.js';
 
 const MAX_NAME = 120;
+const MAX_TEXT = 60; // Marke und Menge; so kürzt sie auch die Datenbank
 const text = (wert) => (typeof wert === 'string' ? wert.trim() : '');
+const kurz = (wert, laenge) => wert.slice(0, laenge).trim();
 
 export function ausOff(antwort) {
   if (!antwort || typeof antwort !== 'object' || antwort.status !== 1) return null;
@@ -12,8 +14,8 @@ export function ausOff(antwort) {
   if (!name) return null;
   return {
     name,
-    marke: text(p.brands).split(',')[0].trim() || null,
-    menge: text(p.quantity) || null,
+    marke: kurz(text(p.brands).split(',')[0].trim(), MAX_TEXT) || null,
+    menge: kurz(text(p.quantity), MAX_TEXT) || null,
   };
 }
 

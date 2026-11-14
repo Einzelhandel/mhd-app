@@ -7,6 +7,7 @@ import { ansichten, wechsle, mhdRpc } from './app.js';
 import { element, meldung, mitSperre, fehlertext, ausweg } from './hilfe.js';
 
 const MAX_NAME = 120;
+const MAX_TEXT = 60; // Marke, Menge, Platz (so kürzt auch die Datenbank)
 
 ansichten['artikel-neu'] = async (wurzel, daten) => {
   const bearbeiten = daten.artikel ?? null;
@@ -36,9 +37,9 @@ ansichten['artikel-neu'] = async (wurzel, daten) => {
     return { eingabe, zeile: element('div', { class: 'feld' }, element('label', { for: id }, beschriftung), eingabe) };
   };
   const name = feld('name', 'Name', vorschlag?.name, { maxlength: MAX_NAME, required: true, 'aria-required': 'true' });
-  const marke = feld('marke', 'Marke', vorschlag?.marke);
-  const menge = feld('menge', 'Menge', vorschlag?.menge);
-  const platz = feld('platz', 'Platz (z. B. Kühlregal 3)', bearbeiten?.platz);
+  const marke = feld('marke', 'Marke', vorschlag?.marke, { maxlength: MAX_TEXT });
+  const menge = feld('menge', 'Menge', vorschlag?.menge, { maxlength: MAX_TEXT });
+  const platz = feld('platz', 'Platz (z. B. Kühlregal 3)', bearbeiten?.platz, { maxlength: MAX_TEXT });
   const gruppe = element('select', { id: 'warengruppe', name: 'warengruppe', required: true, 'aria-required': 'true' },
     element('option', { value: '' }, 'Bitte wählen'),
     gruppen.map((g) => element('option', { value: g.id, selected: g.id === bearbeiten?.warengruppe_id }, g.name)));

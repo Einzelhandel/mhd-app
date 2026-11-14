@@ -136,9 +136,24 @@ alter table mhd.artikel       enable row level security;
 alter table mhd.protokoll     enable row level security;
 
 -- Zustände, die es nicht geben darf (idempotent nachgezogen): Bestand braucht MHD
--- und Prüftag; ohne Bestand muss feststehen, seit wann.
+-- und Prüftag; ohne Bestand muss feststehen, seit wann. Dazu Längengrenzen der Texte
+-- (die Funktionen kürzen bzw. lehnen vorher ab). Stehen schon längere Werte in der
+-- Datenbank, bricht das Laden hier ab und ändert nichts; dann diese Werte zuerst kürzen.
 do $$
 begin
+  if not exists (select 1 from pg_constraint where conname = 'artikel_texte_laenge_check'
+                    and conrelid = 'mhd.artikel'::regclass) then
+    alter table mhd.artikel add constraint artikel_texte_laenge_check
+      check (char_length(marke) <= 60 and char_length(menge) <= 60 and char_length(platz) <= 60);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'mitarbeiter_name_laenge_check'
+                    and conrelid = 'mhd.mitarbeiter'::regclass) then
+    alter table mhd.mitarbeiter add constraint mitarbeiter_name_laenge_check check (char_length(name) <= 40);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'warengruppen_name_laenge_check'
+                    and conrelid = 'mhd.warengruppen'::regclass) then
+    alter table mhd.warengruppen add constraint warengruppen_name_laenge_check check (char_length(name) <= 40);
+  end if;
   if not exists (select 1 from pg_constraint where conname = 'artikel_bestand_check'
                     and conrelid = 'mhd.artikel'::regclass) then
     alter table mhd.artikel add constraint artikel_bestand_check
@@ -578,6 +593,7 @@ $$;
 
 -- Legt einen Artikel an (p_id null) oder ändert ihn (p_id gesetzt).
 -- p_daten: { ean, name, marke, menge, platz, warengruppe_id, quelle }.
+-- Name wird auf 120 Zeichen gekürzt, Marke, Menge und Platz auf 60.
 -- Mit EAN darf jeder Mitarbeiter anlegen; ohne EAN anlegen und jedes Ändern nur
 -- die Marktleitung. Beim Ändern bleibt die EAN unverändert. Geprüft wird nur das
 -- Format der EAN (8 oder 13 Ziffern) und der Waagen-Code (erste Ziffer 2); die
@@ -594,6 +610,9 @@ declare
   v_name   text := nullif(btrim(v_daten ->> 'name'), '');
   v_quelle text := nullif(btrim(v_daten ->> 'quelle'), '');
   v_wg     bigint := nullif(btrim(v_daten ->> 'warengruppe_id'), '')::bigint;
+  v_marke  text := nullif(btrim(left(btrim(v_daten ->> 'marke'), 60)), '');
+  v_menge  text := nullif(btrim(left(btrim(v_daten ->> 'menge'), 60)), '');
+  v_platz  text := nullif(btrim(left(btrim(v_daten ->> 'platz'), 60)), '');
   v_a      mhd.artikel;
 begin
   if p_id is not null or v_ean is null then
@@ -626,9 +645,7 @@ begin
   if p_id is null then
     begin
       insert into mhd.artikel (markt_id, ean, name, marke, menge, platz, warengruppe_id, quelle, bestand, ohne_bestand_seit)
-      values (v_m.markt_id, v_ean, v_name,
-              nullif(btrim(v_daten ->> 'marke'), ''), nullif(btrim(v_daten ->> 'menge'), ''),
-              nullif(btrim(v_daten ->> 'platz'), ''), v_wg,
+      values (v_m.markt_id, v_ean, v_name, v_marke, v_menge, v_platz, v_wg,
               coalesce(v_quelle, 'hand'), false, mhd.heute())
       returning * into v_a;
     exception when unique_violation then
@@ -637,9 +654,9 @@ begin
   else
     update mhd.artikel
        set name = v_name,
-           marke = nullif(btrim(v_daten ->> 'marke'), ''),
-           menge = nullif(btrim(v_daten ->> 'menge'), ''),
-           platz = nullif(btrim(v_daten ->> 'platz'), ''),
+           marke = v_marke,
+           menge = v_menge,
+           platz = v_platz,
            warengruppe_id = v_wg,
            quelle = coalesce(v_quelle, quelle)
      where id = p_id and markt_id = v_m.markt_id
@@ -796,7 +813,7 @@ end;
 $$;
 
 -- Legt einen Mitarbeiter an (p_id null) oder ändert ihn.
--- p_daten: { name, rolle, aktiv, pin }. Die PIN ist beim Anlegen Pflicht; beim Ändern
+-- p_daten: { name (höchstens 40 Zeichen), rolle, aktiv, pin }. Die PIN ist beim Anlegen Pflicht; beim Ändern
 -- optional, setzt sie neu und hebt Sperre und Fehlversuche auf. Die letzte aktive
 -- Leitung darf weder herabgestuft noch deaktiviert werden. Deaktivieren beendet
 -- die Sitzungen des Mitarbeiters. Mitarbeiter werden nie gelöscht (Protokoll).
@@ -815,7 +832,7 @@ declare
   v_aktiv boolean;
   v_id    bigint;
 begin
-  if v_name is null then
+  if v_name is null or char_length(v_name) > 40 then
     raise exception 'NAME_FEHLT';
   end if;
   if v_rolle is null or v_rolle not in ('leitung', 'mitarbeiter') then
@@ -870,7 +887,7 @@ end;
 $$;
 
 -- Legt eine Warengruppe an (p_id null) oder ändert ihre Regel.
--- p_daten: { name, pruef_vorlauf_tage, reduzier_vorlauf_tage, max_intervall_tage }.
+-- p_daten: { name (höchstens 40 Zeichen), pruef_vorlauf_tage, reduzier_vorlauf_tage, max_intervall_tage }.
 -- Regelverstoß (Zahl fehlt, Reduzier-Vorlauf größer als Prüf-Vorlauf, Höchstabstand
 -- unter 1) ist REGEL_UNGUELTIG. Die Termine werden bei jedem Lesen neu berechnet,
 -- eine Änderung wirkt also sofort auf alle Artikel der Gruppe.
@@ -885,7 +902,7 @@ declare
   v_name  text := nullif(btrim(v_daten ->> 'name'), '');
   v_id    bigint;
 begin
-  if v_name is null then
+  if v_name is null or char_length(v_name) > 40 then
     raise exception 'NAME_FEHLT';
   end if;
 

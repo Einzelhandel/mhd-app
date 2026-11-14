@@ -126,6 +126,21 @@ test('Name leer → NAME_FEHLT; Name 300 Zeichen wird auf 120 gekürzt; Warengru
   await assert.rejects(speichern(db, a, a.mitarbeiter, null, { ean: '40123456', name: 'X', warengruppe_id: Number(fremd) }), /WARENGRUPPE_UNBEKANNT/);
 });
 
+test('Marke, Menge und Platz werden auf 60 Zeichen gekürzt (anlegen und ändern); die Tabelle lehnt Längeres ab', async () => {
+  const db = await neueDatenbank();
+  const a = await aufbau(db);
+  const lang = (z) => ` ${z.repeat(100)} `;
+  const neu = await speichern(db, a, a.mitarbeiter, null, { ean: '4012345678901', name: 'Milch', marke: lang('m'), menge: lang('g'), platz: lang('p') });
+  assert.deepEqual([neu.marke, neu.menge, neu.platz], ['m'.repeat(60), 'g'.repeat(60), 'p'.repeat(60)]);
+  const geaendert = await speichern(db, a, a.leitung, neu.id, { name: 'Milch', marke: lang('n'), menge: lang('h'), platz: lang('q') });
+  assert.deepEqual([geaendert.marke, geaendert.menge, geaendert.platz], ['n'.repeat(60), 'h'.repeat(60), 'q'.repeat(60)]);
+  const kurz = await speichern(db, a, a.leitung, neu.id, { name: 'Milch', marke: `${'a'.repeat(59)} b`, menge: '1 l', platz: '' });
+  assert.deepEqual([kurz.marke, kurz.menge, kurz.platz], [`${'a'.repeat(59)}`, '1 l', null]); // gekürzt, dann ohne Leerzeichen am Ende
+  for (const spalte of ['marke', 'menge', 'platz']) {
+    await assert.rejects(db.query(`update mhd.artikel set ${spalte} = $1 where id = $2`, ['x'.repeat(61), neu.id]), /check/, spalte);
+  }
+});
+
 test('suchen/liste zeigen keine Artikel eines anderen Marktes', async () => {
   const db = await neueDatenbank();
   const a = await aufbau(db);

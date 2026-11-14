@@ -14,6 +14,12 @@ test('ausOff', () => {
   assert.equal(ausOff('kaputt'), null);
 });
 
+test('ausOff: Marke und Menge höchstens 60 Zeichen', () => {
+  const r = ausOff({ status: 1, product: { product_name: 'Milch', brands: ` ${'m'.repeat(100)} , Zweite`, quantity: 'g'.repeat(100) } });
+  assert.deepEqual([r.marke.length, r.menge.length], [60, 60]);
+  assert.equal(ausOff({ status: 1, product: { product_name: 'Milch', brands: `${'a'.repeat(59)} b` } }).marke, 'a'.repeat(59));
+});
+
 test('ausOff: Rückfall auf product_name, Marke und Menge leer', () => {
   assert.deepEqual(ausOff({ status: 1, product: { product_name_de: ' ', product_name: 'Milch', brands: ' ', quantity: ' ' } }),
     { name: 'Milch', marke: null, menge: null });
