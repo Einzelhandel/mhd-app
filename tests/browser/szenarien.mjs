@@ -12,6 +12,7 @@ import { starteBrowser, BROWSER } from './cdp.mjs';
 import { baueRahmen, NETZ_ZAEHLER } from './rahmen.mjs';
 import anmeldung from './szenarien-anmeldung.mjs';
 import liste from './szenarien-liste.mjs';
+import scan from './szenarien-scan.mjs';
 import leitung from './szenarien-leitung.mjs';
 import verlauf from './szenarien-verlauf.mjs';
 import verbindung from './szenarien-verbindung.mjs';
@@ -26,7 +27,7 @@ const FOTOS = fileURLToPath(new URL('./fotos/', import.meta.url));
 const filter = (process.argv[2] ?? '').toLowerCase();
 const GRENZE_MS = 120000;
 
-const alle = [...anmeldung, ...liste, ...leitung, ...verlauf, ...verbindung, ...kamera].sort((a, b) => a.nr - b.nr);
+const alle = [...anmeldung, ...liste, ...scan, ...leitung, ...verlauf, ...verbindung, ...kamera].sort((a, b) => a.nr - b.nr);
 const gewaehlt = alle.filter((x) => !filter || x.name.toLowerCase().includes(filter));
 if (!gewaehlt.length) {
   console.error(`Kein Szenario passt zum Filter „${filter}“.`);
