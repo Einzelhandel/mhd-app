@@ -135,6 +135,23 @@ alter table mhd.warengruppen  enable row level security;
 alter table mhd.artikel       enable row level security;
 alter table mhd.protokoll     enable row level security;
 
+-- Zustände, die es nicht geben darf (idempotent nachgezogen): Bestand braucht MHD
+-- und Prüftag; ohne Bestand muss feststehen, seit wann.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'artikel_bestand_check'
+                    and conrelid = 'mhd.artikel'::regclass) then
+    alter table mhd.artikel add constraint artikel_bestand_check
+      check (not bestand or (mhd is not null and letzte_aktion_am is not null));
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'artikel_ohne_bestand_check'
+                    and conrelid = 'mhd.artikel'::regclass) then
+    alter table mhd.artikel add constraint artikel_ohne_bestand_check
+      check (bestand or ohne_bestand_seit is not null);
+  end if;
+end;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Protokoll ist unveränderlich
 -- ---------------------------------------------------------------------------
@@ -369,6 +386,11 @@ begin
   end if;
 
   update mhd.mitarbeiter set fehlversuche = 0, gesperrt_bis = null where id = v_m.id;
+  -- Abgelaufene Sitzungen des Marktes (länger als 30 Minuten ohne Aktion) aufräumen.
+  delete from mhd.sitzungen s
+   using mhd.mitarbeiter x
+   where x.id = s.mitarbeiter_id and x.markt_id = v_markt_id
+     and s.letzte_aktion < mhd.jetzt() - interval '30 minutes';
   insert into mhd.sitzungen (mitarbeiter_id, letzte_aktion) values (v_m.id, mhd.jetzt())
     returning token into v_token;
   return jsonb_build_object('ok', true, 'sitzung', v_token, 'name', v_m.name, 'rolle', v_m.rolle);
@@ -667,7 +689,8 @@ $$;
 --   reduziert     Bestand nötig (KEIN_BESTAND)
 --   aussortiert   mit p_mhd wie geprueft, aber nicht reduziert; ohne p_mhd: kein Bestand
 --   ohne_bestand  nur ohne Bestand (BESTAND_VORHANDEN): stellt die Frage neu
---   ruht          nimmt den Artikel aus der Liste (aktiv = false)
+--   ruht          nur ohne Bestand (BESTAND_VORHANDEN): nimmt den Artikel aus der Liste
+--                 (aktiv = false); ein Artikel mit Bestand darf nicht verschwinden
 -- Es gilt der letzte Stand (keine Sperre gegen gleichzeitige Aktionen).
 create or replace function public.mhd_aktion(
   p_sitzung uuid, p_artikel bigint, p_art text, p_mhd date default null)
@@ -696,7 +719,7 @@ begin
     raise exception 'MHD_FEHLT';
   elsif p_art = 'reduziert' and not v_alt.bestand then
     raise exception 'KEIN_BESTAND';
-  elsif p_art = 'ohne_bestand' and v_alt.bestand then
+  elsif p_art in ('ohne_bestand', 'ruht') and v_alt.bestand then
     raise exception 'BESTAND_VORHANDEN';
   end if;
 
@@ -732,6 +755,189 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------------
+-- Marktleitung: Mitarbeiter, Regeln der Warengruppen, Protokoll
+-- ---------------------------------------------------------------------------
+
+-- Alle Mitarbeiter des Marktes (auch inaktive) nach Name; gesperrt = PIN gerade gesperrt.
+create or replace function public.mhd_mitarbeiter_liste(p_sitzung uuid)
+returns jsonb
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_m mhd.mitarbeiter := mhd.leitung(p_sitzung);
+begin
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+             'id', x.id, 'name', x.name, 'rolle', x.rolle, 'aktiv', x.aktiv,
+             'gesperrt', coalesce(x.gesperrt_bis > mhd.jetzt(), false)) order by x.name, x.id)
+      from mhd.mitarbeiter x
+     where x.markt_id = v_m.markt_id), '[]'::jsonb);
+end;
+$$;
+
+-- Legt einen Mitarbeiter an (p_id null) oder ändert ihn.
+-- p_daten: { name, rolle, aktiv, pin }. Die PIN ist beim Anlegen Pflicht; beim Ändern
+-- optional, setzt sie neu und hebt Sperre und Fehlversuche auf. Die letzte aktive
+-- Leitung darf weder herabgestuft noch deaktiviert werden. Deaktivieren beendet
+-- die Sitzungen des Mitarbeiters. Mitarbeiter werden nie gelöscht (Protokoll).
+create or replace function public.mhd_mitarbeiter_speichern(p_sitzung uuid, p_id bigint, p_daten jsonb)
+returns bigint
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_m     mhd.mitarbeiter := mhd.leitung(p_sitzung);
+  v_daten jsonb := coalesce(p_daten, '{}'::jsonb);
+  v_name  text := nullif(btrim(v_daten ->> 'name'), '');
+  v_rolle text := nullif(btrim(v_daten ->> 'rolle'), '');
+  v_pin   text := nullif(v_daten ->> 'pin', '');
+  v_alt   mhd.mitarbeiter;
+  v_aktiv boolean;
+  v_id    bigint;
+begin
+  if v_name is null then
+    raise exception 'NAME_FEHLT';
+  end if;
+  if v_rolle is null or v_rolle not in ('leitung', 'mitarbeiter') then
+    raise exception 'ROLLE_UNGUELTIG';
+  end if;
+
+  -- Die aktiven Leitungen des Marktes sperren, damit zwei gleichzeitige Änderungen
+  -- nicht beide die „letzte“ Leitung entfernen.
+  perform 1 from mhd.mitarbeiter
+   where markt_id = v_m.markt_id and rolle = 'leitung' and aktiv for update;
+
+  if p_id is null then
+    v_aktiv := coalesce((v_daten ->> 'aktiv')::boolean, true);
+    begin
+      insert into mhd.mitarbeiter (markt_id, name, rolle, pin_hash, aktiv)
+      values (v_m.markt_id, v_name, v_rolle, mhd.pin_hash(v_pin), v_aktiv)
+      returning id into v_id;
+    exception when unique_violation then
+      raise exception 'NAME_VERGEBEN';
+    end;
+    return v_id;
+  end if;
+
+  select * into v_alt from mhd.mitarbeiter where id = p_id and markt_id = v_m.markt_id for update;
+  if v_alt.id is null then
+    raise exception 'MITARBEITER_UNBEKANNT';
+  end if;
+  v_aktiv := coalesce((v_daten ->> 'aktiv')::boolean, v_alt.aktiv);
+
+  if v_alt.rolle = 'leitung' and v_alt.aktiv and not (v_rolle = 'leitung' and v_aktiv)
+     and not exists (select 1 from mhd.mitarbeiter x
+                      where x.markt_id = v_m.markt_id and x.rolle = 'leitung' and x.aktiv and x.id <> v_alt.id) then
+    raise exception 'LETZTE_LEITUNG';
+  end if;
+
+  begin
+    update mhd.mitarbeiter
+       set name = v_name, rolle = v_rolle, aktiv = v_aktiv,
+           pin_hash = case when v_pin is null then pin_hash else mhd.pin_hash(v_pin) end,
+           fehlversuche = case when v_pin is null then fehlversuche else 0 end,
+           gesperrt_bis = case when v_pin is null then gesperrt_bis else null end
+     where id = v_alt.id;
+  exception when unique_violation then
+    raise exception 'NAME_VERGEBEN';
+  end;
+
+  if not v_aktiv then
+    delete from mhd.sitzungen where mitarbeiter_id = v_alt.id;
+  end if;
+  return v_alt.id;
+end;
+$$;
+
+-- Legt eine Warengruppe an (p_id null) oder ändert ihre Regel.
+-- p_daten: { name, pruef_vorlauf_tage, reduzier_vorlauf_tage, max_intervall_tage }.
+-- Regelverstoß (Zahl fehlt, Reduzier-Vorlauf größer als Prüf-Vorlauf, Höchstabstand
+-- unter 1) ist REGEL_UNGUELTIG. Die Termine werden bei jedem Lesen neu berechnet,
+-- eine Änderung wirkt also sofort auf alle Artikel der Gruppe.
+create or replace function public.mhd_warengruppe_speichern(p_sitzung uuid, p_id bigint, p_daten jsonb)
+returns bigint
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_m     mhd.mitarbeiter := mhd.leitung(p_sitzung);
+  v_daten jsonb := coalesce(p_daten, '{}'::jsonb);
+  v_name  text := nullif(btrim(v_daten ->> 'name'), '');
+  v_id    bigint;
+begin
+  if v_name is null then
+    raise exception 'NAME_FEHLT';
+  end if;
+
+  begin
+    if p_id is null then
+      insert into mhd.warengruppen (markt_id, name, pruef_vorlauf_tage, reduzier_vorlauf_tage, max_intervall_tage)
+      values (v_m.markt_id, v_name,
+              (v_daten ->> 'pruef_vorlauf_tage')::integer,
+              (v_daten ->> 'reduzier_vorlauf_tage')::integer,
+              (v_daten ->> 'max_intervall_tage')::integer)
+      returning id into v_id;
+    else
+      update mhd.warengruppen
+         set name = v_name,
+             pruef_vorlauf_tage = (v_daten ->> 'pruef_vorlauf_tage')::integer,
+             reduzier_vorlauf_tage = (v_daten ->> 'reduzier_vorlauf_tage')::integer,
+             max_intervall_tage = (v_daten ->> 'max_intervall_tage')::integer
+       where id = p_id and markt_id = v_m.markt_id
+       returning id into v_id;
+    end if;
+  exception
+    when unique_violation then
+      raise exception 'NAME_VERGEBEN';
+    when check_violation or not_null_violation or invalid_text_representation or numeric_value_out_of_range then
+      raise exception 'REGEL_UNGUELTIG';
+  end;
+
+  if v_id is null then
+    raise exception 'WARENGRUPPE_UNBEKANNT';
+  end if;
+  return v_id;
+end;
+$$;
+
+-- Das Protokoll des Marktes, neueste Zeilen zuerst, höchstens 500. p_von und p_bis
+-- sind ganze Kalendertage in Europe/Berlin (beide eingeschlossen); null lässt die
+-- Grenze offen. Mitarbeiter und Artikel sind Namen; p_mitarbeiter und p_artikel filtern.
+create or replace function public.mhd_protokoll(
+  p_sitzung uuid, p_von date, p_bis date, p_mitarbeiter bigint default null, p_artikel bigint default null)
+returns jsonb
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_m mhd.mitarbeiter := mhd.leitung(p_sitzung);
+begin
+  return coalesce((
+    with t as (
+      select p.id, p.zeitpunkt, p.art, p.mhd_alt, p.mhd_neu, x.name as mitarbeiter, a.name as artikel, a.ean
+        from mhd.protokoll p
+        left join mhd.mitarbeiter x on x.id = p.mitarbeiter_id
+        left join mhd.artikel a on a.id = p.artikel_id
+       where p.markt_id = v_m.markt_id
+         and (p_von is null or p.zeitpunkt >= p_von::timestamp at time zone 'Europe/Berlin')
+         and (p_bis is null or p.zeitpunkt < (p_bis + 1)::timestamp at time zone 'Europe/Berlin')
+         and (p_mitarbeiter is null or p.mitarbeiter_id = p_mitarbeiter)
+         and (p_artikel is null or p.artikel_id = p_artikel)
+       order by p.zeitpunkt desc, p.id desc
+       limit 500)
+    select jsonb_agg(jsonb_build_object(
+             'zeitpunkt', t.zeitpunkt, 'mitarbeiter', t.mitarbeiter, 'artikel', t.artikel,
+             'ean', t.ean, 'art', t.art, 'mhd_alt', t.mhd_alt, 'mhd_neu', t.mhd_neu)
+           order by t.zeitpunkt desc, t.id desc)
+      from t), '[]'::jsonb);
+end;
+$$;
+
+revoke all on function mhd.heute() from public, anon, authenticated;
+revoke all on function mhd.jetzt() from public, anon, authenticated;
+revoke all on function mhd.protokoll_schuetzen() from public, anon, authenticated;
 revoke all on function mhd.pin_hash(text) from public, anon, authenticated;
 revoke all on function mhd.mein_markt() from public, anon, authenticated;
 revoke all on function mhd.wer(uuid) from public, anon, authenticated;
@@ -757,5 +963,13 @@ grant execute on function public.mhd_warengruppen(uuid) to authenticated;
 grant execute on function public.mhd_artikel_suchen(uuid, text) to authenticated;
 grant execute on function public.mhd_artikel_liste(uuid, text, boolean) to authenticated;
 grant execute on function public.mhd_artikel_speichern(uuid, bigint, jsonb) to authenticated;
+revoke all on function public.mhd_mitarbeiter_liste(uuid) from public, anon, authenticated;
+revoke all on function public.mhd_mitarbeiter_speichern(uuid, bigint, jsonb) from public, anon, authenticated;
+revoke all on function public.mhd_warengruppe_speichern(uuid, bigint, jsonb) from public, anon, authenticated;
+revoke all on function public.mhd_protokoll(uuid, date, date, bigint, bigint) from public, anon, authenticated;
+grant execute on function public.mhd_mitarbeiter_liste(uuid) to authenticated;
+grant execute on function public.mhd_mitarbeiter_speichern(uuid, bigint, jsonb) to authenticated;
+grant execute on function public.mhd_warengruppe_speichern(uuid, bigint, jsonb) to authenticated;
+grant execute on function public.mhd_protokoll(uuid, date, date, bigint, bigint) to authenticated;
 
 commit;

@@ -30,13 +30,13 @@ async function umgebung({ name = 'Markt A', email = 'a@example.com', db = null }
     liste: (s = sitzung) => json(db, m.userId, 'select public.mhd_liste($1) as r', [s]),
     zeile: async (id) => (await db.query('select * from mhd.artikel where id = $1', [id])).rows[0],
   };
+  // Liefert [Schlüssel des Abschnitts in mhd_liste, versaeumt]; der Artikel steht in höchstens einem Abschnitt.
   u.wo = async (id) => {
     const l = await u.liste();
-    for (const arr of Object.values(l.abschnitte)) {
-      const a = arr.find((x) => x.id === id);
-      if (a) return [a.abschnitt, a.versaeumt];
-    }
-    return [null, null];
+    const treffer = Object.entries(l.abschnitte).filter(([, arr]) => arr.some((x) => x.id === id));
+    assert.ok(treffer.length <= 1, `Artikel ${id} steht in mehreren Abschnitten: ${treffer.map(([k]) => k)}`);
+    if (treffer.length === 0) return [null, null];
+    return [treffer[0][0], treffer[0][1].find((x) => x.id === id).versaeumt];
   };
   return u;
 }
@@ -153,6 +153,22 @@ test('ohne Bestand: 30 Tage nichts, am 31. Tag ohne_bestand; "ohne_bestand" stel
   assert.equal((await zeile(a)).ohne_bestand_seit, null);
   assert.deepEqual(await wo(a), [null, null]);                    // Termin 17.06.
   await tag('2027-06-17'); assert.deepEqual(await wo(a), ['pruefen', null]);
+});
+
+test('"ruht" nur ohne Bestand: abgelaufener Artikel mit Bestand bleibt auf der Liste', async () => {
+  const { tag, aktion, wo, neu, db } = await umgebung();
+  const a = await neu('Sauerrahm');
+  await aktion(a, 'geprueft', '2026-11-12');
+  await tag('2026-11-14');
+  assert.deepEqual(await wo(a), ['abgelaufen', 'abgelaufen']);
+  const vorher = (await db.query('select count(*)::int as n from mhd.protokoll')).rows[0].n;
+  await assert.rejects(aktion(a, 'ruht'), /BESTAND_VORHANDEN/);
+  assert.deepEqual(await wo(a), ['abgelaufen', 'abgelaufen']);
+  assert.equal((await db.query('select count(*)::int as n from mhd.protokoll')).rows[0].n, vorher);
+  await aktion(a, 'aussortiert');
+  const r = await aktion(a, 'ruht');
+  assert.equal(r.aktiv, false);
+  assert.deepEqual(await wo(a), [null, null]);
 });
 
 test('aussortiert mit neuem MHD: Bestand bleibt, Termin nach neuem MHD', async () => {

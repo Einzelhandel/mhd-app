@@ -60,7 +60,7 @@ test('Artikel: EAN-Format, eindeutige EAN je Markt, Name', async () => {
   const db = await neueDatenbank();
   const { marktId } = await markt(db);
   const neu = (ean, name = 'Milch') => db.query(
-    "insert into mhd.artikel (markt_id, ean, name, quelle) values ($1, $2, $3, 'hand')", [marktId, ean, name]);
+    "insert into mhd.artikel (markt_id, ean, name, quelle, ohne_bestand_seit) values ($1, $2, $3, 'hand', '2026-11-10')", [marktId, ean, name]);
   await neu('4001234567890');
   await neu('12345670');
   await assert.rejects(neu('4001234567890'), /duplicate key/);
@@ -72,6 +72,23 @@ test('Artikel: EAN-Format, eindeutige EAN je Markt, Name', async () => {
   await neu(null, 'Ohne EAN 2');
   const a = (await db.query('select bestand, aktiv, reduziert from mhd.artikel limit 1')).rows[0];
   assert.deepEqual(a, { bestand: false, aktiv: true, reduziert: false });
+});
+
+test('Artikel: Bestand ohne MHD oder Prüftag, fehlendes ohne_bestand_seit werden von der Tabelle abgelehnt', async () => {
+  const db = await neueDatenbank();
+  const { marktId } = await markt(db);
+  const neu = (bestand, mhd, aktion, seit) => db.query(
+    "insert into mhd.artikel (markt_id, name, quelle, bestand, mhd, letzte_aktion_am, ohne_bestand_seit) values ($1, 'A', 'hand', $2, $3, $4, $5)",
+    [marktId, bestand, mhd, aktion, seit]);
+  await assert.rejects(neu(true, null, '2026-11-10', null), /artikel_bestand_check/);
+  await assert.rejects(neu(true, '2026-11-20', null, null), /artikel_bestand_check/);
+  await assert.rejects(neu(false, null, null, null), /artikel_ohne_bestand_check/);
+  await neu(true, '2026-11-20', '2026-11-10', null);
+  await neu(false, null, null, '2026-11-10');
+  const id = (await db.query('select id from mhd.artikel where bestand')).rows[0].id;
+  await assert.rejects(db.query('update mhd.artikel set mhd = null where id = $1', [id]), /artikel_bestand_check/);
+  await assert.rejects(db.query('update mhd.artikel set letzte_aktion_am = null where id = $1', [id]), /artikel_bestand_check/);
+  await assert.rejects(db.query('update mhd.artikel set bestand = false where id = $1', [id]), /artikel_ohne_bestand_check/);
 });
 
 test('Protokoll: update und delete schlagen fehl (PROTOKOLL_UNVERAENDERLICH)', async () => {

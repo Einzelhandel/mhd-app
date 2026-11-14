@@ -94,6 +94,40 @@ test('Sitzung läuft nach 30 Minuten ohne Aktion ab (PIN_ABGELAUFEN), jede Aktio
   await assert.rejects(wer(db, userId, '00000000-0000-0000-0000-000000000000'), /PIN_ABGELAUFEN/);
 });
 
+test('Grenze: genau 30:00 Minuten nach der letzten Aktion gilt die Sitzung noch, bei 30:01 PIN_ABGELAUFEN', async () => {
+  const db = await neueDatenbank();
+  const { userId, leitungId } = await markt(db);
+  await jetztSetzen(db, '2026-11-16 08:00:00+01');
+  const s1 = await pin(db, userId, leitungId, '4711');
+  const s2 = await pin(db, userId, leitungId, '4711');
+  await jetztSetzen(db, '2026-11-16 08:30:00+01');
+  assert.equal(await wer(db, userId, s1), leitungId);
+  await jetztSetzen(db, '2026-11-16 08:30:01+01');
+  await assert.rejects(wer(db, userId, s2), /PIN_ABGELAUFEN/);
+});
+
+test('erfolgreiche Anmeldung räumt abgelaufene Sitzungen des eigenen Marktes auf, gültige und fremde bleiben', async () => {
+  const db = await neueDatenbank();
+  const a = await markt(db, { name: 'Markt A', email: 'a@example.com' });
+  const b = await markt(db, { name: 'Markt B', email: 'b@example.com' });
+  const berta = await mitarbeiterAnlegen(db, a.marktId, 'Berta', '1234');
+  const vorhanden = async (s) => (await db.query('select count(*)::int as n from mhd.sitzungen where token = $1', [s])).rows[0].n;
+  await jetztSetzen(db, '2026-11-16 08:00:00+01');
+  const alt = await pin(db, a.userId, a.leitungId, '4711');
+  const fremd = await pin(db, b.userId, b.leitungId, '4711');
+  await jetztSetzen(db, '2026-11-16 08:20:00+01');
+  const kollege = await pin(db, a.userId, berta, '1234');
+  await jetztSetzen(db, '2026-11-16 08:40:00+01');
+  assert.equal(await vorhanden(alt), 1);                       // abgelaufen, aber noch nicht angefasst
+  await json(db, a.userId, 'select public.mhd_pin_anmelden($1, $2) as r', [a.leitungId, '0000']);
+  assert.equal(await vorhanden(alt), 1);                       // falsche PIN räumt nicht auf
+  const neu = await pin(db, a.userId, a.leitungId, '4711');
+  assert.equal(await vorhanden(alt), 0);
+  assert.equal(await vorhanden(kollege), 1);
+  assert.equal(await vorhanden(fremd), 1);
+  assert.equal(await vorhanden(neu), 1);
+});
+
 test('mhd.leitung: Leitung ok, Mitarbeiter NUR_LEITUNG', async () => {
   const db = await neueDatenbank();
   const { marktId, userId, leitungId } = await markt(db);

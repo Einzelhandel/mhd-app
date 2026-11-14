@@ -153,6 +153,6 @@ test('liste: p_ohne_ean = true liefert nur Artikel ohne EAN; Suche "hack" findet
 test('liste: höchstens 50 Artikel', async () => {
   const db = await neueDatenbank();
   const m = await aufbau(db);
-  await db.query("insert into mhd.artikel (markt_id, name, quelle) select $1, 'Artikel ' || g, 'hand' from generate_series(1, 60) g", [m.marktId]);
+  await db.query("insert into mhd.artikel (markt_id, name, quelle, ohne_bestand_seit) select $1, 'Artikel ' || g, 'hand', '2026-11-10' from generate_series(1, 60) g", [m.marktId]);
   assert.equal((await liste(db, m, m.mitarbeiter)).length, 50);
 });
