@@ -38,6 +38,9 @@ Die PIN gehört nur Ihnen. Die App merkt sich, wer was gemacht hat.
 - Haben Sie 30 Minuten nichts getan, fragt die App noch einmal nach Ihrer PIN.
 - Wenn Sie fertig sind oder jemand anderes das Handy nimmt: Tippen Sie oben auf
   „Abmelden“.
+- Der Knopf „Anderes Konto“ unter den Namen meldet das Konto des Marktes vom Handy
+  ab. Die App fragt vorher „Markt-Konto auf diesem Gerät abmelden?“. Danach braucht
+  es wieder Konto und Passwort des Marktes; im Zweifel tippen Sie auf „Abbrechen“.
 
 ## 3. Der erste Rundgang
 

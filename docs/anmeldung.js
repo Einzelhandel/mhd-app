@@ -36,10 +36,17 @@ ansichten.anmeldung = (wurzel) => {
 };
 
 ansichten.pin = async (wurzel) => {
-  const abmelden = element('button', {
-    type: 'button', class: 'knopf klein',
-    onclick: () => { logout(); wechsle('anmeldung'); },
-  }, 'Anderes Konto');
+  // „Anderes Konto“ meldet das ganze Gerät ab (danach braucht es das Markt-Passwort): erst nachfragen.
+  const abmelden = element('div', { class: 'konto-wechsel' });
+  const anderesKonto = element('button', { type: 'button', class: 'knopf klein', onclick: () => frageAbmelden() }, 'Anderes Konto');
+  abmelden.append(anderesKonto);
+  function frageAbmelden() {
+    abmelden.replaceChildren(
+      element('p', { class: 'frage' }, 'Markt-Konto auf diesem Gerät abmelden?'),
+      element('div', { class: 'ausweg' },
+        element('button', { type: 'button', class: 'knopf haupt', onclick: () => { logout(); wechsle('anmeldung'); } }, 'Abmelden'),
+        element('button', { type: 'button', class: 'knopf', onclick: () => abmelden.replaceChildren(anderesKonto) }, 'Abbrechen')));
+  }
   let markt;
   try {
     markt = await mhdRpc('mhd_markt');

@@ -181,4 +181,28 @@ export default [
       }
     },
   },
+  {
+    nr: 21,
+    name: 'Anderes Konto: erst nachfragen, Abbrechen behält das Markt-Konto',
+    async lauf(h) {
+      const { c } = h;
+      await h.start();
+      await h.marktAnmelden();
+      await h.warteMitarbeiterAuswahl();
+      const gemerkt = () => c.werte(() => Boolean(localStorage.getItem('mhd-markt')));
+      await h.knopf('Anderes Konto', '.ansicht-pin');
+      h.gleich(await h.text('.ansicht-pin .frage'), 'Markt-Konto auf diesem Gerät abmelden?', 'Rückfrage');
+      h.gleich((await h.knopfTexte('.ansicht-pin')).slice(-2), ['Abmelden', 'Abbrechen'], 'Knöpfe der Rückfrage');
+      h.gleich([await h.ansicht(), await gemerkt()], ['pin', true], 'noch nichts abgemeldet');
+      await h.foto('rueckfrage');
+      await h.knopf('Abbrechen', '.ansicht-pin');
+      h.gleich(await h.anzahl('.ansicht-pin .frage'), 0, 'Abbrechen schließt die Rückfrage');
+      h.gleich([await h.ansicht(), await gemerkt()], ['pin', true], 'Abbrechen: Markt-Konto bleibt');
+      h.gleich(await h.texte('.ansicht-pin button.mitarbeiter'), ['Anna', 'Ben', 'Chef'], 'Auswahl der Mitarbeiter bleibt');
+      await h.knopf('Anderes Konto', '.ansicht-pin');
+      await h.knopf('Abmelden', '.ansicht-pin');
+      await h.warteAnsicht('anmeldung');
+      h.gleich(await gemerkt(), false, 'Abmelden: Markt-Konto vom Gerät entfernt');
+    },
+  },
 ];
