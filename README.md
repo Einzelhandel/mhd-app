@@ -67,7 +67,7 @@ npm run test:browser
 - `npm run test:browser`: Durchklick-Szenarien in Chrome oder Edge ohne Fenster
   (als Handy 390 x 844 mit Touch) gegen den lokalen Testserver. Der Test sucht
   Chrome oder Edge an den üblichen Orten unter `C:/Program Files`. Er schreibt
-  Fotos nach `tests/browser/fotos/` (nicht im Repository). Der Test startet seinen
+  Fotos in einen Ordner `fotos` unter `tests/browser/` (wird beim Lauf angelegt, nicht im Repository). Der Test startet seinen
   eigenen Server auf einem freien Port; ein laufendes `npm start` stört nicht.
 
 Erwartet wird: alle Tests grün. Die Anzahl ändert sich mit dem Code und steht
