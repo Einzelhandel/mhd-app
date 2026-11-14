@@ -47,6 +47,14 @@ export default [
       const ausDb = await h.api('Chef', 'mhd_protokoll', { p_von: tag(-6), p_bis: HEUTE });
       h.gleich(zeilen.length, ausDb.length, 'Zeilen der Tabelle = Zeilen aus der Datenbank');
       await h.foto('protokoll');
+      await h.passtInsFenster('Protokoll');
+      // Eine bekannte Zeile: Aktion und beide MHD-Werte liegen im sichtbaren Bereich.
+      const sicht = await c.werte((n) => {
+        const tr = [...document.querySelectorAll('.ansicht-protokoll tbody tr')].find((x) => x.cells[2].textContent.trim() === n);
+        return [...tr.cells].map((td) => { const r = td.getBoundingClientRect(); return { text: td.textContent.trim(), links: r.left, rechts: r.right }; });
+      }, QUARK);
+      h.gleich(sicht.map((z) => z.text).slice(3), ['Geprüft', `${eingabe(tag(3))} → ${eingabe(tag(30))}`], 'bekannte Zeile: Aktion und MHD alt → neu');
+      h.pruefe(sicht.every((z) => z.links >= 0 && z.rechts <= 390), 'bekannte Zeile: alle Zellen im Fenster', sicht);
 
       await h.knopf('Zurück', '.ansicht-protokoll');
       await h.warteListe();
@@ -56,6 +64,7 @@ export default [
       await h.ruhe();
       h.gleich(await h.texte('.ansicht-einstellungen .kartenzeile .name'), ['Anna', 'Ben', 'Chef'], 'Mitarbeiter in den Einstellungen');
       await h.foto('einstellungen');
+      await h.passtInsFenster('Einstellungen');
 
       // Haferflocken (Trockensortiment 14/7/30, MHD in 14 Tagen) sind heute zu prüfen; eine längere Vorlaufzeit macht das Prüfen „versäumt“.
       await c.tippe(zahlFeld('Trockensortiment', 0), '15');

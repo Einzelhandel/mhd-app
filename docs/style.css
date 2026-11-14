@@ -157,3 +157,12 @@ input[type="password"], .pin-feld { letter-spacing: 0.2em; }
 .protokoll { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
 .protokoll th, .protokoll td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--linie); vertical-align: top; }
 .protokoll td:first-child { white-space: nowrap; }
+
+/* Schmale Bildschirme: je Protokollzeile ein Block statt einer Tabelle (Zeit und Mitarbeiter, Artikel, Aktion und MHD). */
+@media (max-width: 600px) {
+  .protokoll, .protokoll tbody { display: block; }
+  .protokoll thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .protokoll tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; padding: 8px 6px; border-bottom: 1px solid var(--linie); }
+  .protokoll td { display: block; padding: 0; border: 0; overflow-wrap: anywhere; }
+  .protokoll td:nth-child(3) { grid-column: 1 / -1; font-weight: 600; }
+}

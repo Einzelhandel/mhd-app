@@ -155,6 +155,12 @@ export function baueRahmen({ s, c }) {
     await h.warteListe();
   };
 
+  // Die Seite scrollt nicht seitwärts (auf dem Handy darf nichts über den Rand ragen).
+  h.passtInsFenster = async (was) => {
+    const m = await c.werte(() => ({ breite: document.documentElement.scrollWidth, fenster: window.innerWidth }));
+    h.pruefe(m.breite <= m.fenster, `${was}: kein seitliches Scrollen`, `scrollWidth ${m.breite} > innerWidth ${m.fenster}`);
+  };
+
   // Von der Liste aus abmelden und als anderer Mitarbeiter anmelden.
   h.wechsleZu = async (name, pin = '1234') => {
     await h.knopf('Abmelden', '.ansicht-liste');

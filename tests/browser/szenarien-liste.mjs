@@ -16,6 +16,7 @@ export default [
       await h.oeffneAusListe('pruefen', QUARK);
       h.gleich(await h.text('.ansicht-artikel h1'), QUARK, 'Artikel-Ansicht');
       h.gleich(await c.werte(() => document.getElementById('mhd').value), '19.11.26', 'Feld zeigt das gespeicherte MHD');
+      await h.passtInsFenster('Artikel');
       await h.foto('artikel');
       await h.mhdEintippen(tag(30));
       await h.knopf('Geprüft', '.ansicht-artikel');
@@ -91,6 +92,7 @@ export default [
       await c.warteAuf(() => !/wird gestartet/.test(document.querySelector('.ansicht-scan .hinweis-text').textContent), { text: 'Kamera-Rückmeldung' });
       h.pruefe(/Kamera|Nummer eintippen/.test(await h.text('.ansicht-scan .hinweis-text')), 'Hinweis zur fehlenden Kamera', await h.text('.ansicht-scan .hinweis-text'));
       await h.foto('scan');
+      await h.passtInsFenster('Scannen');
 
       await c.tippe('#ean', '4311501646854', { enter: true });
       await h.warteAnsicht('artikel');
@@ -115,6 +117,7 @@ export default [
       h.gleich(await h.meldung(), 'Bitte eine Warengruppe wählen.', 'ohne Warengruppe kein Speichern');
       await h.waehleOption('#warengruppe', 'Backwaren');
       await h.foto('neuer-artikel');
+      await h.passtInsFenster('Neuer Artikel');
       await h.knopf('Speichern', '.ansicht-artikel-neu');
       await h.warteAnsicht('artikel');
       await h.ruhe();
@@ -128,6 +131,7 @@ export default [
       h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern'], 'nur der Knopf „MHD speichern“');
       h.pruefe(!(await h.text('.ansicht-artikel')).includes('Wieder da'), 'kein „Wieder da“');
       await h.foto('neu-mhd');
+      await h.passtInsFenster('Neuer Artikel nach dem Anlegen');
       await h.mhdEintippen(tag(10));
       await h.knopf('MHD speichern', '.ansicht-artikel');
       await h.warteListe();
@@ -162,6 +166,7 @@ export default [
       h.gleich(ohne.map((r) => r.name), ['Hackfleisch gemischt'], 'DB: das ist der einzige Artikel ohne Strichcode');
       h.gleich(await h.sql('select count(*)::int as n from mhd.artikel where ean = $1', ['2912345003500']).then((r) => r[0].n), 0, 'DB: kein Artikel für das Etikett angelegt');
       await h.foto('suche');
+      await h.passtInsFenster('Suche');
     },
   },
   {

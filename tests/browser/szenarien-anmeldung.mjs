@@ -44,6 +44,7 @@ export default [
       h.gleich((await h.sitzungen('Anna')).length, 1, 'DB: genau eine Sitzung');
       h.pruefe(await c.werte(() => Boolean(sessionStorage.getItem('mhd-pin'))), 'PIN-Sitzung im Tab');
       await h.foto('liste');
+      await h.passtInsFenster('Liste');
     },
   },
   {
