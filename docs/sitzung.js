@@ -22,7 +22,9 @@ export function emailFuer(konto) {
 const ABGEMELDET = new Set([400, 401, 403]);
 
 // Die App benutzt nur die Standard-Sitzung unten; api und speicher werden nur in Tests ausgetauscht.
-export function neueSitzung({ api = standardApi, speicher = globalThis } = {}) {
+// Ohne Seite (Node-Tests, die ein Modul der App laden) gibt es keinen Speicher; Node warnt sonst beim Zugriff.
+const BROWSER_SPEICHER = typeof document === 'undefined' ? {} : globalThis;
+export function neueSitzung({ api = standardApi, speicher = BROWSER_SPEICHER } = {}) {
   function lese(art, schluessel) {
     try { return JSON.parse(speicher[art].getItem(schluessel)); } catch { return null; }
   }
