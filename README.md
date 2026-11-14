@@ -43,7 +43,12 @@ geschickt; der Server hört nur auf diesem Rechner. Beendet wird er mit Strg+C.
 | Konto des Marktes | `demo` |
 | Passwort | `test` |
 | Mitarbeiter Anna oder Ben | PIN `1234` |
-| Marktleitung Chef | PIN `9999` (gilt nur im lokalen Testserver) |
+| Marktleitung Chef | PIN `9999` |
+
+Diese Zugangsdaten gelten nur für den lokalen Testserver. Für eine Demo im
+Internet stehen Konto, Passwort und PINs nicht im Repository; sie werden der
+prüfenden IT direkt übergeben. So kann kein Fremder die Demo-Mitarbeiter sperren
+oder PINs durchprobieren.
 
 Die Demo-Artikel haben echte Strichcodes (Namen und Strichcodes stammen aus Open
 Food Facts), die MHDs sind erfunden und relativ zu heute gesetzt, sodass jeder
@@ -165,7 +170,8 @@ Außerdem:
   ```
 
   Das legt den erfundenen Demo-Markt mit Anna, Ben und der Leitung „Chef“ an.
-  Die Leitungs-PIN gehört nicht ins Repository. Zurücksetzen der Demo (Artikel,
+  Die Leitungs-PIN und das Passwort des Demo-Kontos gehören nicht ins
+  Repository, sondern werden direkt übergeben. Zurücksetzen der Demo (Artikel,
   Protokoll, Warengruppen, Sperren, PINs von Anna und Ben): derselbe Aufruf ohne
   PIN, `select mhd.demo_einrichten('demo@example.com');`; die Leitungs-PIN bleibt
   dann unverändert. Dies löscht nur die Daten des Demo-Markts.
