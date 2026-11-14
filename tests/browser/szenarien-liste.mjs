@@ -29,6 +29,19 @@ export default [
       h.gleich(p.at(-1), { art: 'geprueft', mhd_alt: tag(3), mhd_neu: tag(30), mitarbeiter: 'Anna' }, 'DB: Protokollzeile');
       h.gleich(p.length, 2, 'DB: eine Zeile mehr als nach dem Zurücksetzen');
       h.gleich(await h.istListe(), await h.sollListe(), 'Liste entspricht der Datenbank');
+
+      // Zweimal Enter im MHD-Feld, während der erste Aufruf noch läuft: nur eine Aktion.
+      const HAFER = 'Haferflocken Kernig';
+      await h.oeffneAusListe('pruefen', HAFER);
+      h.s.verzoegere(800, { nur: 'mhd_aktion' });
+      try {
+        await c.tippe('#mhd', '311226', { enter: true });
+        await c.taste('Enter');
+        await h.warteListe();
+      } finally {
+        h.s.verzoegere(0);
+      }
+      h.gleich((await h.protokoll(HAFER)).length, 2, 'DB: zweimal Enter ergibt eine Protokollzeile');
     },
   },
   {
