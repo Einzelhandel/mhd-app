@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "start": "node tests/server.mjs 8123"
+    "start": "node tests/server.mjs 8123",
+    "test:browser": "node tests/browser/szenarien.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
