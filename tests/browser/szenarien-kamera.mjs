@@ -1,4 +1,4 @@
-// Szenario mit künstlicher Kamera: Chrome spielt ein Video mit dem Strichcode eines Demo-Artikels ab, gelesen wird
+// Szenario mit nachgebildeter Kamera: Chrome spielt ein Video mit dem Strichcode eines Demo-Artikels ab, gelesen wird
 // über die mitgelieferte Bibliothek (der BarcodeDetector des Browsers ist dafür ausgeschaltet).
 // Die Schalter der Kamera gelten nur beim Start des Browsers: Das Szenario startet deshalb einen eigenen Browser.
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';

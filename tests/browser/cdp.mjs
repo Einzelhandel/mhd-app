@@ -25,7 +25,7 @@ const profilWeg = (profil) => {
 
 const pause = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
-// zusatz: weitere Schalter für den Browser (z. B. eine künstliche Kamera).
+// zusatz: weitere Schalter für den Browser (z. B. eine nachgebildete Kamera).
 export async function starteBrowser({ breite = 390, hoehe = 844, zusatz = [] } = {}) {
   if (!BROWSER) throw new Error('Kein Chrome oder Edge gefunden');
   const profil = mkdtempSync(join(tmpdir(), 'mhd-cdp-'));

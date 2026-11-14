@@ -1,4 +1,4 @@
-// Ein Video im Format Y4M mit einem EAN-13-Strichcode, als Bild für die künstliche Kamera von Chrome
+// Ein Video im Format Y4M mit einem EAN-13-Strichcode, als Bild für die nachgebildete Kamera von Chrome
 // (--use-file-for-fake-video-capture). Graustufen, 4:2:0, das Bild steht still.
 
 const L = ['0001101', '0011001', '0010011', '0111101', '0100011', '0110001', '0101111', '0111011', '0110111', '0001011'];

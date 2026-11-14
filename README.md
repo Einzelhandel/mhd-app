@@ -58,7 +58,7 @@ Neustart des Servers ist alles wieder im Ausgangszustand.
 
 Die Kamera funktioniert im Browser nur über HTTPS oder über `localhost`. Am
 selben Rechner geht der Scan also: Der Browser-Test liest den Strichcode eines
-Demo-Artikels aus der künstlichen Kamera von Chrome über die mitgelieferte
+Demo-Artikels aus der nachgebildeten Kamera von Chrome über die mitgelieferte
 Bibliothek (mit einer echten Webcam nicht ausprobiert). Vom Handy im WLAN auf
 den Rechner zuzugreifen geht nicht (der Server hört nur lokal), ein Handy
 braucht die veröffentlichte HTTPS-Adresse. Ohne Kamera lässt sich jeder
