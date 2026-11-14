@@ -2,6 +2,7 @@
 import { ansichten, wechsle, gibtAnsicht, mhdRpc, ich, stand, abmelden } from './app.js';
 import { element, meldung, fehlertext, ausweg } from './hilfe.js';
 import { zeigeDatum } from './datum.js';
+import { installBereich } from './app-installieren.js';
 
 // Feste Reihenfolge der Abschnitte (die Datenbank liefert die Schlüssel alphabetisch).
 export const ABSCHNITTE = [
@@ -96,7 +97,7 @@ ansichten.liste = (wurzel) => {
     gibtAnsicht('scan') && element('button', { type: 'button', class: 'knopf haupt', onclick: () => wechsle('scan') }, 'Scannen'),
     gibtAnsicht('suche') && element('button', { type: 'button', class: 'knopf haupt', onclick: () => wechsle('suche') }, 'Suche'));
 
-  wurzel.append(kopf, inhalt, leiste);
+  wurzel.append(kopf, installBereich(), inhalt, leiste);
   aktiv = { wurzel, laden };
   return laden();
 };

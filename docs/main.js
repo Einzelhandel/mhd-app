@@ -12,4 +12,7 @@ import './artikel-neu.js';
 import './einstellungen.js';
 import './protokoll.js';
 
+// Service Worker nur über HTTPS oder auf localhost (nur dort gibt es navigator.serviceWorker); Fehler bleiben still.
+navigator.serviceWorker?.register('sw.js').catch(() => { /* ohne Service Worker gilt der normale Zwischenspeicher */ });
+
 start();

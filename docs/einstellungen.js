@@ -1,7 +1,7 @@
 // Ansicht „Einstellungen“ (nur Marktleitung): Mitarbeiter und Regeln je Warengruppe.
 // Die Rechte prüft der Server (NUR_LEITUNG); die Ansicht zeigt sich nur der Leitung.
 import { ansichten, wechsle, mhdRpc, ich } from './app.js';
-import { element, meldung, mitSperre, fehlertext, ausweg } from './hilfe.js';
+import { element, meldung, mitSperre, fehlertext, ausweg, pinFeld } from './hilfe.js';
 import { pruefeRegel, pruefePin } from './leitung-logik.js';
 
 let zaehler = 0;
@@ -35,8 +35,12 @@ function mitarbeiterFormular(m, speichern, abbrechen) {
     Object.entries(ROLLEN).map(([wert, text]) => element('option', { value: wert, selected: wert === (m?.rolle ?? 'mitarbeiter') }, text)));
   const aktiv = element('input', { id: neueId('aktiv'), name: 'aktiv', type: 'checkbox', checked: m ? m.aktiv : true });
   // Die PIN wird nie vorbelegt und nach dem Speichern nicht wieder angezeigt.
-  const pin = textFeld(m ? 'Neue PIN (leer lassen = unverändert)' : 'PIN (4 bis 6 Ziffern)', '',
-    { type: 'password', inputmode: 'numeric', maxlength: 6, autocomplete: 'new-password' });
+  const pinId = neueId('pin');
+  const pin = { eingabe: pinFeld({ id: pinId, name: pinId }) };
+  pin.zeile = element('div', { class: 'feld' },
+    element('label', { for: pinId }, m ? 'Neue PIN (leer lassen = unverändert)' : 'PIN (4 bis 6 Ziffern)'),
+    pin.eingabe,
+    m?.gesperrt && element('p', { class: 'hinweis-text' }, 'Eine neue PIN hebt die Sperre auf.'));
   const { stelle, zeige } = fehlerStelle();
   const formular = element('form', {
     class: 'formular karte',

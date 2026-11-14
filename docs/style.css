@@ -148,7 +148,11 @@ select:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
 .knopfreihe .knopf { flex: 1; }
 .zahlfeld { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 400; }
 .zahlfeld input.zahl { width: 5em; text-align: center; }
-input[type="password"] { letter-spacing: 0.2em; }
+input[type="password"], .pin-feld { letter-spacing: 0.2em; }
+.pin-feld { -webkit-text-security: disc; }
+.app-hinweis { margin: 8px 0; font-size: 0.95rem; }
+.app-hinweis .knopf { min-height: 48px; }
+.app-hinweis .klein { color: var(--grau); }
 .tabelle-rahmen { overflow-x: auto; margin: 8px 0; }
 .protokoll { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
 .protokoll th, .protokoll td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--linie); vertical-align: top; }

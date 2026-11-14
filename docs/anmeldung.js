@@ -1,7 +1,7 @@
 // Anmeldung in zwei Schritten: Markt-Konto (Passwort), danach Mitarbeiter und PIN.
 // Aufbau übernommen aus einem früheren eigenen Projekt.
 import { ansichten, wechsle, mhdRpc } from './app.js';
-import { element, meldung, mitSperre, fehlertext, uhrzeit, ausweg } from './hilfe.js';
+import { element, meldung, mitSperre, fehlertext, uhrzeit, ausweg, pinFeld } from './hilfe.js';
 import { login, logout, pinSetzen } from './sitzung.js';
 
 ansichten.anmeldung = (wurzel) => {
@@ -66,10 +66,7 @@ ansichten.pin = async (wurzel) => {
 
   function zeigePin(m) {
     meldung('');
-    const pin = element('input', {
-      id: 'pin', name: 'pin', type: 'password', inputmode: 'numeric', pattern: '[0-9]*',
-      maxlength: '6', autocomplete: 'off', required: true, 'aria-label': `PIN von ${m.name}`,
-    });
+    const pin = pinFeld({ id: 'pin', name: 'pin', required: true, 'aria-label': `PIN von ${m.name}` });
     const formular = element('form', {
       class: 'formular',
       onsubmit: (ereignis) => {

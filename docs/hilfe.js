@@ -20,6 +20,20 @@ export function element(tag, attribute = {}, ...kinder) {
   return e;
 }
 
+// Attribute eines PIN-Feldes. Das Gerät im Markt teilen sich mehrere Mitarbeiter: Der Browser darf eine PIN weder
+// zum Speichern anbieten noch beim nächsten Mitarbeiter eintragen, deshalb kein Passwortfeld; die Ziffern
+// verdeckt die Klasse pin-feld per CSS. Die Sicherheitsattribute lassen sich nicht überschreiben.
+export function pinAttribute(extra = {}) {
+  return {
+    ...extra,
+    type: 'text', inputmode: 'numeric', pattern: '[0-9]*', autocomplete: 'off', maxlength: '6',
+    autocorrect: 'off', autocapitalize: 'off', spellcheck: 'false',
+    class: ['pin-feld', extra.class].filter(Boolean).join(' '),
+  };
+}
+
+export const pinFeld = (extra = {}) => element('input', pinAttribute(extra));
+
 const FEHLER = {
   // Browser-Schicht und Anmeldung
   KEINE_VERBINDUNG: 'Keine Verbindung. Bitte prüfe das Netz.',
