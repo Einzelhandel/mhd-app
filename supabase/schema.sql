@@ -218,7 +218,40 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------------
+-- Terminlogik
+-- ---------------------------------------------------------------------------
+
+-- Nächster Termin eines Artikels, berechnet nach einer Aktion am Tag p_letzte.
+-- Drei Termine je MHD: prüfen (MHD - p_pruef), reduzieren (MHD - p_reduzier,
+-- entfällt, wenn schon reduziert) und läuft heute ab (am MHD-Tag). Es zählt der
+-- früheste Termin, der nach p_letzte liegt, spätestens aber p_letzte + p_max
+-- (dann als „pruefen“). Bei gleichem Datum gilt: laeuft_ab vor reduzieren vor
+-- pruefen. Liegt p_letzte auf oder nach dem MHD, gibt es keinen Termin (keine Zeile).
+create or replace function mhd.termin(
+  p_mhd date, p_letzte date, p_reduziert boolean,
+  p_pruef int, p_reduzier int, p_max int)
+returns table (datum date, art text)
+language sql immutable
+set search_path = ''
+as $$
+  select k.datum, k.art
+    from (
+      select p_mhd - p_pruef as datum, 'pruefen' as art, 3 as rang
+      union all
+      select p_mhd - p_reduzier, 'reduzieren', 2 where not p_reduziert
+      union all
+      select p_mhd, 'laeuft_ab', 1
+      union all
+      select p_letzte + p_max, 'pruefen', 3
+    ) as k
+   where p_letzte < p_mhd and k.datum > p_letzte
+   order by k.datum, k.rang
+   limit 1
+$$;
+
 revoke all on function mhd.pin_hash(text) from public, anon, authenticated;
 revoke all on function mhd.markt_anlegen(text, text, text, text) from public, anon, authenticated;
+revoke all on function mhd.termin(date, date, boolean, int, int, int) from public, anon, authenticated;
 
 commit;
