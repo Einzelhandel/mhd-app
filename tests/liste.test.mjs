@@ -1,6 +1,7 @@
 // Liste „Heute“ und Aktionen: Abschnitte, Termine, Protokoll.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { neueDatenbank, json, heuteSetzen, markt, pin } from './helfer.mjs';
 
 // Markt mit Leitung und einem gewöhnlichen Mitarbeiter; liefert Helfer für Tests.
@@ -132,13 +133,44 @@ test('Höchstabstand: MHD in 200 Tagen, 30 Tage nach der Prüfung unter pruefen'
   await tag('2026-12-15'); assert.deepEqual(await wo(a), ['abgelaufen', 'pruefen']);
 });
 
+test('neu angelegt, MHD noch nie gespeichert: sofort unter ohne_bestand mit „mhd_fehlt“, nach geprueft weg', async () => {
+  const { tag, aktion, wo, neu, liste } = await umgebung();
+  await tag('2026-11-14');
+  const a = await neu('Ayran');                                   // Mitarbeiter bricht vor „MHD speichern“ ab
+  assert.deepEqual(await wo(a), ['ohne_bestand', 'mhd_fehlt']);
+  assert.equal((await liste()).abschnitte.ohne_bestand.find((x) => x.id === a).seit_tagen, 0);
+  await tag('2026-11-20');
+  assert.deepEqual(await wo(a), ['ohne_bestand', 'mhd_fehlt']);  // bleibt stehen, bis jemand das MHD speichert
+  assert.equal((await liste()).abschnitte.ohne_bestand.find((x) => x.id === a).seit_tagen, 6);
+  const r = await aktion(a, 'geprueft', '2026-12-20');
+  assert.equal(r.versaeumt, null);
+  assert.deepEqual(await wo(a), [null, null]);
+});
+
+test('Demo-Daten: weiterhin alle fünf Abschnitte gefüllt, kein Artikel mit „mhd_fehlt“', async () => {
+  const db = await neueDatenbank();
+  await heuteSetzen(db, '2026-11-16');
+  await db.exec(readFileSync(new URL('../supabase/demo-daten.sql', import.meta.url), 'utf8'));
+  const konto = (await db.query("insert into auth.users (email) values ('demo@example.com') returning id")).rows[0].id;
+  await db.query("select mhd.demo_einrichten('demo@example.com', '9999')");
+  const anna = Number((await db.query("select id from mhd.mitarbeiter where name = 'Anna'")).rows[0].id);
+  const l = await json(db, konto, 'select public.mhd_liste($1) as r', [await pin(db, konto, anna, '1234')]);
+  const zahlen = Object.fromEntries(Object.entries(l.abschnitte).map(([k, v]) => [k, v.length]));
+  assert.deepEqual(zahlen, { abgelaufen: 2, laeuft_ab: 1, pruefen: 2, reduzieren: 2, ohne_bestand: 1 });
+  assert.equal(Object.values(l.abschnitte).flat().filter((x) => x.versaeumt === 'mhd_fehlt').length, 0);
+});
+
 test('ohne Bestand: 30 Tage nichts, am 31. Tag ohne_bestand; "ohne_bestand" stellt die Frage neu; "ruht" entfernt; geprueft holt zurück', async () => {
   const { tag, aktion, wo, zeile, neu, liste } = await umgebung();
   await tag('2026-11-14');
-  const a = await neu('Skyr');                                   // neu: kein Bestand, ohne_bestand_seit = 14.11.
+  const a = await neu('Skyr');
+  await aktion(a, 'geprueft', '2026-11-20');
+  await aktion(a, 'aussortiert');                                 // kein Bestand gemeldet, ohne_bestand_seit = 14.11.
+  assert.deepEqual(await wo(a), [null, null]);
   await tag('2026-12-14'); assert.deepEqual(await wo(a), [null, null]);
   await tag('2026-12-15'); assert.deepEqual(await wo(a), ['ohne_bestand', null]);
   assert.equal((await liste()).abschnitte.ohne_bestand[0].seit_tagen, 31);
+  assert.equal((await liste()).abschnitte.ohne_bestand[0].versaeumt, null);
   await aktion(a, 'ohne_bestand');
   assert.deepEqual(await wo(a), [null, null]);
   await tag('2027-01-14'); assert.deepEqual(await wo(a), [null, null]);

@@ -54,7 +54,8 @@ test('neuer Artikel mit EAN: jeder Mitarbeiter; erscheint in suchen und liste', 
   assert.equal(a.mhd, null);
   assert.equal(a.reduziert, false);
   assert.equal(a.aktiv, true);
-  for (const k of ['abschnitt', 'versaeumt', 'seit_tagen']) assert.equal(a[k], null);
+  // Noch nie ein MHD gespeichert: steht sofort in der Liste, damit ungeprüfte Ware nicht unsichtbar bleibt.
+  assert.deepEqual([a.abschnitt, a.versaeumt, a.seit_tagen], ['ohne_bestand', 'mhd_fehlt', 0]);
   assert.deepEqual(Object.keys(a).sort(), ['abschnitt', 'aktiv', 'bestand', 'ean', 'id', 'marke', 'menge', 'mhd', 'name', 'platz', 'reduziert', 'seit_tagen', 'versaeumt', 'warengruppe', 'warengruppe_id']);
   const zeile = (await db.query('select quelle, ohne_bestand_seit::text as seit from mhd.artikel where id = $1', [a.id])).rows[0];
   assert.equal(zeile.quelle, 'off');

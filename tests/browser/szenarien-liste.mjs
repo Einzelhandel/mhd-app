@@ -145,6 +145,38 @@ export default [
       h.pruefe(await c.zurueck(), 'Zurück-Schritt möglich');
       await c.pause(300);
       h.gleich(await h.anzahl('.ansicht-artikel, .ansicht-artikel-neu'), 0, 'Zurück führt nicht in Artikel oder Formular');
+
+      // Angelegt, aber ohne MHD zurück (Abbruch vor „MHD speichern“): Der Artikel steht sofort auf der Liste.
+      await c.navigiere(`${h.s.url}/`);
+      await h.warteListe();
+      await h.knopf('Scannen', '.ansicht-liste');
+      await h.warteAnsicht('scan');
+      await c.tippe('#ean', '4000000000013', { enter: true });
+      await h.warteAnsicht('artikel-neu');
+      await c.warteAuf(() => document.getElementById('name'), { text: 'Formular Neuer Artikel' });
+      await c.tippe('#name', 'Testsemmel');
+      await h.waehleOption('#warengruppe', 'Backwaren');
+      await h.knopf('Speichern', '.ansicht-artikel-neu');
+      await h.warteAnsicht('artikel');
+      await h.ruhe();
+      h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern'], 'zweiter neuer Artikel: nur „MHD speichern“');
+      await h.knopf('Zurück', '.ansicht-artikel');
+      await h.warteListe();
+      const ohne = (await h.liste()).find((x) => x.schluessel === 'ohne_bestand');
+      h.gleich(ohne?.titel, 'Ohne Bestand – wieder da? (2)', 'Abschnitt „Ohne Bestand – wieder da?“ mit dem neuen Artikel');
+      h.gleich(ohne?.zeilen.find((z) => z.name === 'Testsemmel')?.status, 'MHD fehlt noch', 'Status „MHD fehlt noch“');
+      h.gleich(await h.istListe(), await h.sollListe(), 'Liste entspricht der Datenbank');
+      await h.foto('mhd-fehlt');
+      await h.oeffneAusListe('ohne_bestand', 'Testsemmel');
+      h.gleich(await h.text('.ansicht-artikel .frage'), 'Neuer Artikel – bitte das vorderste MHD eingeben.', 'aus der Liste: Hinweis zum neuen Artikel');
+      h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern'], 'aus der Liste: nur der Knopf „MHD speichern“');
+      h.gleich(await h.text('.ansicht-artikel .status-gross'), 'MHD fehlt noch', 'Status im Artikel');
+      await h.mhdEintippen(tag(5));
+      await h.knopf('MHD speichern', '.ansicht-artikel');
+      await h.warteListe();
+      h.pruefe(!(await h.alleNamen()).includes('Testsemmel'), 'nach dem Speichern nicht mehr auf der Liste', await h.alleNamen());
+      a = await h.artikel('Testsemmel');
+      h.gleich([a.mhd, a.bestand], [tag(5), true], 'DB: MHD gespeichert, Bestand');
     },
   },
   {

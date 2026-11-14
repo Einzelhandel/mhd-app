@@ -15,10 +15,11 @@ export function schritte(art, feldText, artikel, heute) {
   return [{ art: 'geprueft', mhd }, { art }];
 }
 
-// Welche Knöpfe der Artikel anbietet: 'neu' (gerade angelegt: nur das MHD der vordersten Ware speichern),
+// Welche Knöpfe der Artikel anbietet: 'neu' (MHD noch nie gespeichert: nur das MHD der vordersten Ware speichern),
 // 'ohne_bestand' (ruhend oder ohne Bestand: wieder da, weiter ohne Bestand, aus dem Sortiment nehmen) oder 'bestand'.
-// `neu` kommt aus den Ansichtsdaten und gilt nur für einen Artikel ohne Bestand.
+// 'neu' folgt aus dem Zustand des Artikels (versaeumt 'mhd_fehlt' vom Server), egal ob er gerade angelegt,
+// gescannt oder aus der Liste geöffnet wurde; `neu` aus den Ansichtsdaten gilt zusätzlich, nur ohne Bestand.
 export function panelArt(artikel, neu = false) {
-  if (!artikel.bestand && artikel.aktiv !== false && neu) return 'neu';
+  if (!artikel.bestand && artikel.aktiv !== false && (neu || artikel.versaeumt === 'mhd_fehlt')) return 'neu';
   return artikel.aktiv === false || !artikel.bestand ? 'ohne_bestand' : 'bestand';
 }

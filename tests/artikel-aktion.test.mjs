@@ -48,3 +48,11 @@ test('panelArt: neu angelegt nur „neu“, sonst nach Bestand und Sortiment', (
   assert.equal(panelArt({ bestand: true, aktiv: true }, true), 'bestand');
   assert.equal(panelArt({ bestand: true, aktiv: false }), 'ohne_bestand');
 });
+
+test('panelArt: MHD noch nie gespeichert („mhd_fehlt“) ist „neu“, auch ohne Merker (z. B. aus der Liste geöffnet)', () => {
+  assert.equal(panelArt({ bestand: false, aktiv: true, versaeumt: 'mhd_fehlt' }), 'neu');
+  assert.equal(panelArt({ bestand: false, aktiv: true, versaeumt: 'mhd_fehlt' }, false), 'neu');
+  assert.equal(panelArt({ bestand: false, aktiv: true, versaeumt: null }), 'ohne_bestand');
+  assert.equal(panelArt({ bestand: false, aktiv: false, versaeumt: 'mhd_fehlt' }), 'ohne_bestand');
+  assert.equal(panelArt({ bestand: true, aktiv: true, versaeumt: 'abgelaufen' }), 'bestand');
+});

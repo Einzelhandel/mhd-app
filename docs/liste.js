@@ -27,7 +27,7 @@ export function statusText(artikel, heute) {
     if (text) teile.push(`${text} ${tage(artikel.seit_tagen)}`);
     if (artikel.mhd === heute) teile.push('läuft heute ab');
   } else if (artikel.abschnitt === 'ohne_bestand') {
-    teile.push(`ohne Bestand seit ${tage(artikel.seit_tagen)}`);
+    teile.push(artikel.versaeumt === 'mhd_fehlt' ? 'MHD fehlt noch' : `ohne Bestand seit ${tage(artikel.seit_tagen)}`);
   }
   return teile.join(' · ');
 }
