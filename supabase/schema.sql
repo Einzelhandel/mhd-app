@@ -250,7 +250,156 @@ as $$
    limit 1
 $$;
 
+-- ---------------------------------------------------------------------------
+-- Anmeldung: Markt-Konto und PIN
+-- ---------------------------------------------------------------------------
+
+-- Der Markt des angemeldeten Kontos (auth.uid()); ohne Konto oder Verknüpfung KEIN_ZUGRIFF.
+create or replace function mhd.mein_markt()
+returns bigint
+language plpgsql stable
+set search_path = ''
+as $$
+declare
+  v_markt_id bigint;
+begin
+  select markt_id into v_markt_id from mhd.markt_konten where user_id = auth.uid();
+  if v_markt_id is null then
+    raise exception 'KEIN_ZUGRIFF';
+  end if;
+  return v_markt_id;
+end;
+$$;
+
+-- Der Mitarbeiter hinter einer Sitzung. Die Sitzung muss zum Markt des Kontos
+-- gehören, der Mitarbeiter aktiv sein und die letzte Aktion höchstens 30 Minuten
+-- zurückliegen; jeder Aufruf verlängert die Sitzung. Sonst PIN_ABGELAUFEN.
+create or replace function mhd.wer(p_sitzung uuid)
+returns mhd.mitarbeiter
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_markt_id bigint := mhd.mein_markt();
+  v_m        mhd.mitarbeiter;
+begin
+  select m.* into v_m
+    from mhd.sitzungen s
+    join mhd.mitarbeiter m on m.id = s.mitarbeiter_id
+   where s.token = p_sitzung
+     and m.markt_id = v_markt_id
+     and m.aktiv
+     and s.letzte_aktion >= mhd.jetzt() - interval '30 minutes';
+  if v_m.id is null then
+    raise exception 'PIN_ABGELAUFEN';
+  end if;
+  update mhd.sitzungen set letzte_aktion = mhd.jetzt() where token = p_sitzung;
+  return v_m;
+end;
+$$;
+
+-- Wie wer, aber nur für die Marktleitung (sonst NUR_LEITUNG).
+create or replace function mhd.leitung(p_sitzung uuid)
+returns mhd.mitarbeiter
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_m mhd.mitarbeiter := mhd.wer(p_sitzung);
+begin
+  if v_m.rolle <> 'leitung' then
+    raise exception 'NUR_LEITUNG';
+  end if;
+  return v_m;
+end;
+$$;
+
+-- Markt und aktive Mitarbeiter (nur Id und Name) für die Auswahl nach der Markt-Anmeldung.
+create or replace function public.mhd_markt()
+returns jsonb
+language plpgsql stable security definer
+set search_path = ''
+as $$
+declare
+  v_markt_id bigint := mhd.mein_markt();
+begin
+  return jsonb_build_object(
+    'markt', (select jsonb_build_object('id', m.id, 'name', m.name) from mhd.maerkte m where m.id = v_markt_id),
+    'mitarbeiter', coalesce((
+      select jsonb_agg(jsonb_build_object('id', x.id, 'name', x.name) order by x.name, x.id)
+        from mhd.mitarbeiter x
+       where x.markt_id = v_markt_id and x.aktiv), '[]'::jsonb));
+end;
+$$;
+
+-- PIN-Anmeldung. Falsche PIN ist KEINE Exception: sie würde das Hochzählen von
+-- fehlversuche zurückrollen und die Sperre wirkungslos machen. Fehler als JSON.
+-- Nach 5 falschen PINs ist der Mitarbeiter 15 Minuten gesperrt.
+create or replace function public.mhd_pin_anmelden(p_mitarbeiter bigint, p_pin text)
+returns jsonb
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_markt_id bigint := mhd.mein_markt();
+  v_m        mhd.mitarbeiter;
+  v_token    uuid;
+begin
+  select * into v_m from mhd.mitarbeiter
+   where id = p_mitarbeiter and markt_id = v_markt_id and aktiv
+   for update;
+  if v_m.id is null then
+    return jsonb_build_object('ok', false, 'fehler', 'PIN_FALSCH', 'gesperrt_bis', null);
+  end if;
+
+  if v_m.gesperrt_bis is not null and v_m.gesperrt_bis > mhd.jetzt() then
+    return jsonb_build_object('ok', false, 'fehler', 'PIN_GESPERRT', 'gesperrt_bis', v_m.gesperrt_bis);
+  end if;
+
+  if v_m.pin_hash <> extensions.crypt(coalesce(p_pin, ''), v_m.pin_hash) then
+    if v_m.fehlversuche + 1 >= 5 then
+      update mhd.mitarbeiter
+         set fehlversuche = 0, gesperrt_bis = mhd.jetzt() + interval '15 minutes'
+       where id = v_m.id
+       returning gesperrt_bis into v_m.gesperrt_bis;
+      return jsonb_build_object('ok', false, 'fehler', 'PIN_GESPERRT', 'gesperrt_bis', v_m.gesperrt_bis);
+    end if;
+    update mhd.mitarbeiter set fehlversuche = fehlversuche + 1 where id = v_m.id;
+    return jsonb_build_object('ok', false, 'fehler', 'PIN_FALSCH', 'gesperrt_bis', null);
+  end if;
+
+  update mhd.mitarbeiter set fehlversuche = 0, gesperrt_bis = null where id = v_m.id;
+  insert into mhd.sitzungen (mitarbeiter_id, letzte_aktion) values (v_m.id, mhd.jetzt())
+    returning token into v_token;
+  return jsonb_build_object('ok', true, 'sitzung', v_token, 'name', v_m.name, 'rolle', v_m.rolle);
+end;
+$$;
+
+-- Beendet die Sitzung; eine unbekannte oder fremde Sitzung wird still ignoriert.
+create or replace function public.mhd_pin_abmelden(p_sitzung uuid)
+returns void
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_markt_id bigint := mhd.mein_markt();
+begin
+  delete from mhd.sitzungen s
+   using mhd.mitarbeiter m
+   where s.token = p_sitzung and m.id = s.mitarbeiter_id and m.markt_id = v_markt_id;
+end;
+$$;
+
 revoke all on function mhd.pin_hash(text) from public, anon, authenticated;
+revoke all on function mhd.mein_markt() from public, anon, authenticated;
+revoke all on function mhd.wer(uuid) from public, anon, authenticated;
+revoke all on function mhd.leitung(uuid) from public, anon, authenticated;
+revoke all on function public.mhd_markt() from public, anon, authenticated;
+revoke all on function public.mhd_pin_anmelden(bigint, text) from public, anon, authenticated;
+revoke all on function public.mhd_pin_abmelden(uuid) from public, anon, authenticated;
+grant execute on function public.mhd_markt() to authenticated;
+grant execute on function public.mhd_pin_anmelden(bigint, text) to authenticated;
+grant execute on function public.mhd_pin_abmelden(uuid) to authenticated;
 revoke all on function mhd.markt_anlegen(text, text, text, text) from public, anon, authenticated;
 revoke all on function mhd.termin(date, date, boolean, int, int, int) from public, anon, authenticated;
 

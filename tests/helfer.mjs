@@ -65,6 +65,13 @@ export async function jetztSetzen(db, isoText) {
   await db.query("select set_config('mhd.jetzt', $1, false)", [isoText ?? '']);
 }
 
+// Meldet einen Mitarbeiter mit PIN an und liefert das Sitzungs-Token; wirft, wenn die Anmeldung scheitert.
+export async function pin(db, userId, mitarbeiterId, pinText) {
+  const r = await json(db, userId, 'select public.mhd_pin_anmelden($1, $2) as r', [mitarbeiterId, pinText]);
+  if (!r.ok) throw new Error(`Anmeldung fehlgeschlagen: ${r.fehler}`);
+  return r.sitzung;
+}
+
 // Legt ein Markt-Konto in auth.users an und einen Markt mit Leitung über mhd.markt_anlegen.
 export async function markt(db, { name = 'Testmarkt', email = 'markt@example.com', leitung = 'Chef', pin = '4711' } = {}) {
   const u = await db.query('insert into auth.users (email) values ($1) returning id', [email]);
