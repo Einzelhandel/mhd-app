@@ -5,7 +5,7 @@
 --   select mhd.demo_einrichten('demo@example.com', '<Leitungs-PIN>');   -- beim ersten Mal mit PIN
 --   select mhd.demo_einrichten('demo@example.com');                     -- Zurücksetzen (z. B. täglich)
 -- Das Zurücksetzen löscht Artikel und Protokoll des Demo-Markts (und nur dieses) und legt sie neu an;
--- Sperren werden aufgehoben, die PIN von Anna und Ben ist danach wieder 1234. Die Leitungs-PIN ändert
+-- Auch die Warengruppen stehen danach wieder auf den Startwerten. Sperren werden aufgehoben, die PIN von Anna und Ben ist danach wieder 1234. Die Leitungs-PIN ändert
 -- sich nur, wenn p_leitung_pin gesetzt ist. Alle Daten sind relativ zu mhd.heute().
 -- Produktnamen und Mengen sind die öffentlichen Angaben aus Open Food Facts.
 
@@ -49,6 +49,17 @@ begin
   delete from mhd.protokoll where markt_id = v_markt;
   delete from mhd.artikel where markt_id = v_markt;
   perform set_config('mhd.demo_reset', '', true);
+
+  -- Warengruppen auf die Startwerte: fehlende anlegen, vorhandene zurücksetzen, selbst angelegte
+  -- löschen (sie haben keine Artikel mehr, die Artikel des Demo-Markts sind oben gelöscht).
+  insert into mhd.warengruppen (markt_id, name, pruef_vorlauf_tage, reduzier_vorlauf_tage, max_intervall_tage)
+  select v_markt, s.name, s.pruef, s.reduzier, s.hoechst from mhd.standard_warengruppen() as s
+  on conflict (markt_id, name) do update
+    set pruef_vorlauf_tage = excluded.pruef_vorlauf_tage,
+        reduzier_vorlauf_tage = excluded.reduzier_vorlauf_tage,
+        max_intervall_tage = excluded.max_intervall_tage;
+  delete from mhd.warengruppen w
+   where w.markt_id = v_markt and w.name not in (select s.name from mhd.standard_warengruppen() as s);
 
   select id into v_anna from mhd.mitarbeiter where markt_id = v_markt and name = 'Anna';
 

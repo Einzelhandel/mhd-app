@@ -194,6 +194,28 @@ begin
 end;
 $$;
 
+-- Die Startwerte der Warengruppen (Name, Prüf-, Reduzier-Vorlauf, Höchstabstand in Tagen).
+-- Genutzt von markt_anlegen und vom Zurücksetzen der Demo-Daten.
+create or replace function mhd.standard_warengruppen()
+returns table (name text, pruef int, reduzier int, hoechst int)
+language sql immutable
+set search_path = ''
+as $$
+  select * from (values
+    ('Molkerei', 3, 2, 30),
+    ('Fleisch und Wurst', 2, 1, 14),
+    ('Backwaren', 2, 1, 14),
+    ('Feinkost und Salate', 3, 2, 14),
+    ('Tiefkühl', 30, 14, 60),
+    ('Trockensortiment', 14, 7, 30),
+    ('Süßwaren', 14, 7, 30),
+    ('Getränke', 30, 14, 60),
+    ('Konserven', 30, 14, 90),
+    ('Drogerie', 30, 14, 90),
+    ('Sonstiges', 7, 3, 30)
+  ) as v (name, pruef, reduzier, hoechst)
+$$;
+
 -- Legt Markt, Konto-Verknüpfung, erste Marktleitung und die Standard-Warengruppen an.
 -- Das Konto (E-Mail) muss in Supabase Auth schon existieren.
 create or replace function mhd.markt_anlegen(p_name text, p_email text, p_leitung text, p_pin text)
@@ -217,19 +239,7 @@ begin
 
   insert into mhd.warengruppen (markt_id, name, pruef_vorlauf_tage, reduzier_vorlauf_tage, max_intervall_tage)
   select v_markt_id, v.name, v.pruef, v.reduzier, v.hoechst
-  from (values
-    ('Molkerei', 3, 2, 30),
-    ('Fleisch und Wurst', 2, 1, 14),
-    ('Backwaren', 2, 1, 14),
-    ('Feinkost und Salate', 3, 2, 14),
-    ('Tiefkühl', 30, 14, 60),
-    ('Trockensortiment', 14, 7, 30),
-    ('Süßwaren', 14, 7, 30),
-    ('Getränke', 30, 14, 60),
-    ('Konserven', 30, 14, 90),
-    ('Drogerie', 30, 14, 90),
-    ('Sonstiges', 7, 3, 30)
-  ) as v (name, pruef, reduzier, hoechst);
+    from mhd.standard_warengruppen() as v;
 
   return v_markt_id;
 end;
@@ -949,6 +959,7 @@ grant execute on function public.mhd_markt() to authenticated;
 grant execute on function public.mhd_pin_anmelden(bigint, text) to authenticated;
 grant execute on function public.mhd_pin_abmelden(uuid) to authenticated;
 revoke all on function mhd.markt_anlegen(text, text, text, text) from public, anon, authenticated;
+revoke all on function mhd.standard_warengruppen() from public, anon, authenticated;
 revoke all on function mhd.termin(date, date, boolean, int, int, int) from public, anon, authenticated;
 revoke all on function mhd.artikel_json(mhd.artikel) from public, anon, authenticated;
 revoke all on function public.mhd_warengruppen(uuid) from public, anon, authenticated;

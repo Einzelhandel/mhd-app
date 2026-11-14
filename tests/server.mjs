@@ -158,6 +158,8 @@ export async function starteServer({ port = 0 } = {}) {
     const typ = TYPEN[extname(datei)] ?? 'application/octet-stream';
     if (datei === join(DOCS, 'config.js')) {
       const text = inhalt.toString('utf8');
+      // Der Host kommt aus der Anfrage und landet in Quelltext: nur ein unauffälliger Host wird übernommen.
+      if (!/^[\w.\-]+(:\d+)?$/.test(host)) host = `localhost:${server.address().port}`;
       const neu = text
         .replace(/export const SUPABASE_URL = [^;]*;/, `export const SUPABASE_URL = 'http://${host}';`)
         .replace(/export const SUPABASE_KEY = [^;]*;/, "export const SUPABASE_KEY = 'lokaler-test-schluessel';")

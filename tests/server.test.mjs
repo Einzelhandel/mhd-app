@@ -175,5 +175,57 @@ test('demo_einrichten ist für anon und authenticated nicht aufrufbar', async ()
   const u = (await s.db.query("select id from auth.users where email = 'demo@example.com'")).rows[0].id;
   for (const rolle of ['anon', 'authenticated']) {
     await assert.rejects(als(s.db, rolle, u, "select mhd.demo_einrichten('demo@example.com')"), /permission denied/);
+    const r = await s.db.query(
+      "select has_function_privilege($1, 'mhd.demo_einrichten(text, text)', 'execute') as ok", [rolle]);
+    assert.equal(r.rows[0].ok, false, rolle);
+  }
+});
+
+test('demo_einrichten stellt die Warengruppen wieder her; alle fünf Abschnitte sind danach gefüllt', async () => {
+  const markt = "(select id from mhd.maerkte where name = 'Demo-Markt')";
+  const regel = async (name) => (await s.db.query(
+    `select pruef_vorlauf_tage as p, reduzier_vorlauf_tage as r, max_intervall_tage as h
+       from mhd.warengruppen where markt_id = ${markt} and name = $1`, [name])).rows[0];
+  assert.deepEqual(await regel('Molkerei'), { p: 3, r: 2, h: 30 });
+  // Regel ändern, eine Startgruppe löschen, eine eigene Gruppe (mit Artikel) anlegen.
+  await s.db.query(`update mhd.warengruppen set pruef_vorlauf_tage = 9, reduzier_vorlauf_tage = 5, max_intervall_tage = 12
+                     where markt_id = ${markt} and name = 'Molkerei'`);
+  await s.db.query(`delete from mhd.warengruppen where markt_id = ${markt} and name = 'Konserven'`);
+  await s.db.query(`insert into mhd.warengruppen (markt_id, name, pruef_vorlauf_tage, reduzier_vorlauf_tage, max_intervall_tage)
+                    values (${markt}, 'Eigene Gruppe', 5, 2, 20)`);
+  await s.db.query(`insert into mhd.artikel (markt_id, name, quelle, warengruppe_id, ohne_bestand_seit)
+                    select ${markt}, 'Eigener Artikel', 'hand', id, mhd.heute() from mhd.warengruppen
+                     where markt_id = ${markt} and name = 'Eigene Gruppe'`);
+  assert.deepEqual(await regel('Molkerei'), { p: 9, r: 5, h: 12 });
+
+  await s.db.query("select mhd.demo_einrichten('demo@example.com')");
+
+  assert.deepEqual(await regel('Molkerei'), { p: 3, r: 2, h: 30 });
+  assert.deepEqual(await regel('Konserven'), { p: 30, r: 14, h: 90 });
+  assert.equal(await regel('Eigene Gruppe'), undefined);
+  assert.equal((await s.db.query(`select count(*)::int as n from mhd.warengruppen where markt_id = ${markt}`)).rows[0].n, 11);
+  const t = await anmelden();
+  const anna = (await rpc('mhd_markt', {}, t.access_token)).json.mitarbeiter.find((x) => x.name === 'Anna');
+  const sitzung = (await rpc('mhd_pin_anmelden', { p_mitarbeiter: anna.id, p_pin: '1234' }, t.access_token)).json.sitzung;
+  const l = (await rpc('mhd_liste', { p_sitzung: sitzung }, t.access_token)).json;
+  const zahlen = Object.fromEntries(Object.entries(l.abschnitte).map(([k, v]) => [k, v.length]));
+  assert.deepEqual(zahlen, { abgelaufen: 2, laeuft_ab: 1, pruefen: 2, reduzieren: 2, ohne_bestand: 1 });
+});
+
+test('Host-Kopf: nur ein unauffälliger Host kommt in config.js, sonst localhost:<port>', async () => {
+  const config = (host) => new Promise((ok, fehler) => {
+    const r = request({ host: '127.0.0.1', port: s.port, path: '/config.js', headers: { host } }, (a) => {
+      let text = '';
+      a.on('data', (d) => { text += d; });
+      a.on('end', () => ok(text));
+    });
+    r.on('error', fehler); r.end();
+  });
+  assert.match(await config('meinrechner.local:8123'), /SUPABASE_URL = 'http:\/\/meinrechner\.local:8123'/);
+  for (const boese of ["x';alert(1);//", 'a b', "evil.example/'", 'a:b']) {
+    const text = await config(boese);
+    assert.match(text, new RegExp(`SUPABASE_URL = 'http://localhost:${s.port}'`), boese);
+    assert.match(text, new RegExp(`OFF_URL = 'http://localhost:${s.port}/off'`), boese);
+    assert.doesNotMatch(text, /alert|evil/, boese);
   }
 });

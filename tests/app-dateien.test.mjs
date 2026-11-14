@@ -2,6 +2,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { starteServer } from './server.mjs';
 
 const lese = (name) => readFileSync(new URL(`../docs/${name}`, import.meta.url));
@@ -71,7 +72,7 @@ test('icons-erzeugen.mjs schreibt bei jedem Lauf dieselben Bytes wie die eingech
   const skript = new URL('../werkzeug/icons-erzeugen.mjs', import.meta.url);
   const ordner = mkdtempSync(join(tmpdir(), 'mhd-icons-'));
   try {
-    execFileSync(process.execPath, [skript.pathname.replace(/^\/([A-Za-z]:)/, '$1'), ordner]);
+    execFileSync(process.execPath, [fileURLToPath(skript), ordner]);
     for (const datei of ['icon-192.png', 'icon-512.png']) {
       assert.ok(readFileSync(join(ordner, datei)).equals(lese(datei)), datei);
     }
