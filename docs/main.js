@@ -7,5 +7,7 @@ import './anmeldung.js';
 import './liste.js';
 import './artikel.js';
 import './suche.js';
+import './scan.js';
+import './artikel-neu.js';
 
 start();

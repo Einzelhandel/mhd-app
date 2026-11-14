@@ -58,6 +58,13 @@ input[type="text"], input[type="password"], input[type="search"] {
   font: inherit; font-size: 1.2rem;
   border: 2px solid var(--linie); border-radius: 10px; background: var(--flaeche);
 }
+select {
+  width: 100%; min-height: 56px; padding: 8px 12px;
+  font: inherit; font-size: 1.2rem; color: var(--text);
+  border: 2px solid var(--linie); border-radius: 10px; background: var(--flaeche);
+}
+select:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+.feld { display: grid; gap: 4px; }
 .schalter { display: flex; align-items: center; gap: 12px; min-height: 56px; font-weight: 400; }
 .schalter input { width: 28px; height: 28px; }
 .hinweis-text { color: var(--grau); margin: 4px 0; }
@@ -123,3 +130,9 @@ input[type="text"], input[type="password"], input[type="search"] {
 .leiste .knopf { width: 100%; }
 .ansicht-liste .leiste { flex-direction: row; }
 .ansicht-liste .leiste .knopf { flex: 1; }
+
+/* Scannen */
+.kamera { display: block; width: 100%; max-height: 50vh; background: #000; border-radius: 10px; object-fit: cover; }
+
+/* Ausweg bei Ladefehlern */
+.ausweg { display: grid; gap: 10px; margin: 16px 0; }

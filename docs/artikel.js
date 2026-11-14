@@ -1,7 +1,8 @@
 // Ansicht „Artikel“: Angaben zum Artikel und die Aktionen (geprüft, reduziert, aussortiert, wieder da …).
 import { ansichten, wechsle, mhdRpc, serverHeute } from './app.js';
-import { element, meldung, mitSperre } from './hilfe.js';
+import { element, meldung, mitSperre, fehlertext, ausweg } from './hilfe.js';
 import { leseDatum, zeigeDatum } from './datum.js';
+import { schritte, DATUM_FEHLER } from './artikel-aktion.js';
 import { statusText } from './liste.js';
 
 const HINWEISE = {
@@ -15,21 +16,32 @@ const HINWEISE = {
 
 ansichten.artikel = async (wurzel, daten) => {
   const a = daten.artikel;
-  const heute = await serverHeute();
+  const zurueck = () => (daten.zurueck ? wechsle(daten.zurueck.ansicht, daten.zurueck.daten) : wechsle('liste'));
+  let heute;
+  try {
+    heute = await serverHeute();
+  } catch (fehler) {
+    if (fehler.behandelt) throw fehler;
+    meldung(fehlertext(fehler.message));
+    wurzel.append(element('h1', {}, a.name), ausweg(() => wechsle('artikel', daten), zurueck));
+    return;
+  }
   const bereich = element('div', { class: 'bereich' });
 
-  const zurueck = () => (daten.zurueck ? wechsle(daten.zurueck.ansicht, daten.zurueck.daten) : wechsle('liste'));
-
-  // Führt die Aktion aus und kehrt mit kurzer Bestätigung zur Liste zurück.
-  function aktion(art, mhd, hinweis = HINWEISE[art]) {
+  // Sendet die Aufrufe nacheinander (schlägt einer fehl, bleiben die folgenden ungesendet)
+  // und kehrt mit kurzer Bestätigung zur Liste zurück.
+  function ausfuehren(aufrufe, hinweis) {
     return mitSperre(wurzel, async () => {
-      const parameter = { p_artikel: a.id, p_art: art };
-      if (mhd) parameter.p_mhd = mhd;
-      await mhdRpc('mhd_aktion', parameter);
+      for (const { art, mhd } of aufrufe) {
+        const parameter = { p_artikel: a.id, p_art: art };
+        if (mhd) parameter.p_mhd = mhd;
+        await mhdRpc('mhd_aktion', parameter);
+      }
       wechsle('liste');
       meldung(hinweis, 'ok');
     });
   }
+  const aktion = (art, mhd, hinweis = HINWEISE[art]) => ausfuehren([{ art, mhd }], hinweis);
 
   // Datumsfeld mit Meldung daneben; lies() gibt ISO zurück oder null (und zeigt den Grund).
   function datumFeld(beschriftung, wert) {
@@ -47,7 +59,7 @@ ansichten.artikel = async (wurzel, daten) => {
       lies() {
         const iso = leseDatum(eingabe.value, heute);
         if (!iso) {
-          zeige('Bitte ein Datum eingeben, z. B. 201126 für 20.11.26.');
+          zeige(DATUM_FEHLER);
           eingabe.focus();
         }
         return iso;
@@ -114,13 +126,23 @@ ansichten.artikel = async (wurzel, daten) => {
       return;
     }
     const feld = datumFeld('Vorderstes MHD', a.mhd);
-    const geprueft = () => {
-      const iso = feld.lies();
-      if (iso) pruefeAbgelaufen(iso, () => aktion('geprueft', iso));
+    // Geprüft und Reduziert lesen beide das Feld; Reduziert sendet ein geändertes MHD zuerst als „geprüft“.
+    const mitFeld = (art) => () => {
+      const aufrufe = schritte(art, feld.eingabe.value, a, heute);
+      if (aufrufe.fehler) {
+        feld.zeige(aufrufe.fehler);
+        feld.eingabe.focus();
+        return;
+      }
+      const senden = () => ausfuehren(aufrufe, HINWEISE[art]);
+      const neuesMhd = aufrufe[0].mhd; // geprueft: das MHD; reduziert: nur bei geändertem MHD
+      if (neuesMhd) pruefeAbgelaufen(neuesMhd, senden);
+      else senden();
     };
+    const geprueft = mitFeld('geprueft');
     zeigePanel(feld.zeile, [
       knopf('Geprüft', geprueft, 'haupt'),
-      knopf('Reduziert', () => aktion('reduziert')),
+      knopf('Reduziert', mitFeld('reduziert')),
       knopf('Aussortiert', () => zeigeAussortiert()),
     ], geprueft);
   }
@@ -140,4 +162,5 @@ ansichten.artikel = async (wurzel, daten) => {
     a.reduziert && a.bestand && element('p', { class: 'einzelheit' }, 'Bereits reduziert.'),
     bereich].filter(Boolean));
   zeigeHaupt();
+  if (daten.fokus === 'mhd') wurzel.querySelector('#mhd')?.focus();
 };

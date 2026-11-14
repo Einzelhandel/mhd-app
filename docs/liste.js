@@ -1,6 +1,6 @@
 // Ansicht „Heute“: die fünf Abschnitte der Tagesliste.
 import { ansichten, wechsle, gibtAnsicht, mhdRpc, ich, stand, abmelden } from './app.js';
-import { element, meldung, fehlertext } from './hilfe.js';
+import { element, meldung, fehlertext, ausweg } from './hilfe.js';
 import { zeigeDatum } from './datum.js';
 
 // Feste Reihenfolge der Abschnitte (die Datenbank liefert die Schlüssel alphabetisch).
@@ -80,7 +80,7 @@ ansichten.liste = (wurzel) => {
       if (fehler.behandelt || mein !== lauf) return;
       meldung(fehlertext(fehler.message));
       if (!inhalt.querySelector('.abschnitt')) {
-        inhalt.replaceChildren(element('button', { type: 'button', class: 'knopf', onclick: laden }, 'Neu laden'));
+        inhalt.replaceChildren(ausweg(laden));
       }
     }
   }

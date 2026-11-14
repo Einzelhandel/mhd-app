@@ -1,7 +1,7 @@
 // Anmeldung in zwei Schritten: Markt-Konto (Passwort), danach Mitarbeiter und PIN.
 // Aufbau übernommen aus einem früheren eigenen Projekt.
 import { ansichten, wechsle, mhdRpc } from './app.js';
-import { element, meldung, mitSperre, fehlertext, uhrzeit } from './hilfe.js';
+import { element, meldung, mitSperre, fehlertext, uhrzeit, ausweg } from './hilfe.js';
 import { login, logout, pinSetzen } from './sitzung.js';
 
 ansichten.anmeldung = (wurzel) => {
@@ -36,12 +36,21 @@ ansichten.anmeldung = (wurzel) => {
 };
 
 ansichten.pin = async (wurzel) => {
-  const markt = await mhdRpc('mhd_markt');
-  const kopf = element('h1', {}, markt.markt.name);
   const abmelden = element('button', {
     type: 'button', class: 'knopf klein',
     onclick: () => { logout(); wechsle('anmeldung'); },
   }, 'Anderes Konto');
+  let markt;
+  try {
+    markt = await mhdRpc('mhd_markt');
+  } catch (fehler) {
+    if (fehler.behandelt) throw fehler;
+    // Ohne Mitarbeiterliste geht es nicht weiter: noch einmal versuchen oder ein anderes Konto nehmen.
+    meldung(fehlertext(fehler.message));
+    wurzel.append(element('h1', {}, 'MHD'), ausweg(() => wechsle('pin')), abmelden);
+    return;
+  }
+  const kopf = element('h1', {}, markt.markt.name);
 
   const liste = element('div', { class: 'knopfliste' });
   const eingabeBereich = element('div', { class: 'pin-bereich' });

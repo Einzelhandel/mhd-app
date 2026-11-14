@@ -1,0 +1,172 @@
+// Ansicht „Scannen“: Kamera, Handeingabe (auch für Handscanner, die als Tastatur arbeiten)
+// und die Entscheidung, was nach einem gelesenen Strichcode geschieht.
+//
+// Strichcode-Leser: Wo der Browser einen BarcodeDetector hat (Chrome auf Android), wird er benutzt.
+// Sonst wird vendor/zxing.min.js nachgeladen. Diese Datei ist eine unveränderte Kopie von
+// node_modules/@zxing/library/umd/index.min.js aus dem npm-Paket @zxing/library 0.23.0
+// (Lizenz: vendor/LICENSE-zxing.txt, Kopie von node_modules/@zxing/library/LICENSE).
+import { ansichten, wechsle, mhdRpc } from './app.js';
+import { element, meldung, fehlertext } from './hilfe.js';
+import { normalisiereEan, istWaagencode } from './ean.js';
+import { holeOff } from './off.js';
+
+const TAKT_MS = 200;
+const FORMATE = ['ean_13', 'ean_8', 'upc_a'];
+const NICHT_LESBAR = 'Strichcode nicht lesbar. Bitte noch einmal scannen oder Nummer eintippen.';
+const WAAGE = 'Waagen-Etikett: Artikel bitte aus der Liste wählen.';
+
+// Reine Entscheidung ohne DOM. `rpc` und `off` werden übergeben (in der App: mhdRpc und holeOff).
+// Reihenfolge: Text prüfen, Waagen-Code, Artikel im Markt suchen, nur für Unbekannte Open Food Facts fragen.
+export async function nachScan(text, { rpc, off }) {
+  const ean = normalisiereEan(text);
+  if (!ean) return { ziel: 'fehler', meldung: NICHT_LESBAR };
+  if (istWaagencode(ean)) return { ziel: 'suche', daten: { ohneEan: true }, meldung: WAAGE };
+  const artikel = await rpc('mhd_artikel_suchen', { p_ean: ean });
+  if (artikel) return { ziel: 'artikel', daten: { artikel } };
+  const vorschlag = (await off(ean)) ?? null;
+  return { ziel: 'artikel-neu', daten: { ean, vorschlag, quelle: vorschlag ? 'off' : 'hand' } };
+}
+
+// ---- Kamera ----
+
+function ladeZxing() {
+  if (globalThis.ZXing) return Promise.resolve(globalThis.ZXing);
+  return new Promise((ok, nein) => {
+    const skript = element('script', { src: 'vendor/zxing.min.js' });
+    skript.addEventListener('load', () => (globalThis.ZXing ? ok(globalThis.ZXing) : nein(new Error('ZXING'))));
+    skript.addEventListener('error', () => nein(new Error('ZXING')));
+    document.head.append(skript);
+  });
+}
+
+// Liefert eine Funktion video → gelesener Text oder null.
+async function baueLeser() {
+  if ('BarcodeDetector' in window) {
+    try {
+      const detektor = new window.BarcodeDetector({ formats: FORMATE });
+      return async (video) => (await detektor.detect(video))[0]?.rawValue ?? null;
+    } catch { /* Formate nicht unterstützt: Bibliothek nehmen */ }
+  }
+  const Z = await ladeZxing();
+  const hinweise = new Map([[Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A]]]);
+  // Das Bild (Canvas, Graustufen) baut BrowserMultiFormatReader. Gelesen wird mit dem 1D-Leser selbst: Der
+  // MultiFormatReader der Bibliothek schreibt bei jedem Bild ohne Strichcode eine Warnung in die Konsole.
+  const bildleser = new Z.BrowserMultiFormatReader(hinweise);
+  const leser = new Z.MultiFormatOneDReader(hinweise);
+  return async (video) => {
+    try { return leser.decode(bildleser.createBinaryBitmap(video), hinweise).getText(); } catch { return null; } // „nichts gefunden“ ist der Normalfall
+  };
+}
+
+const KEINE_KAMERA = {
+  sicher: 'Die Kamera ist hier nicht verfügbar (sie braucht eine sichere Verbindung). Bitte die Nummer eintippen.',
+  NotAllowedError: 'Die Kamera ist nicht erlaubt. Bitte in den Einstellungen des Browsers freigeben oder die Nummer eintippen.',
+  NotFoundError: 'Es wurde keine Kamera gefunden. Bitte die Nummer eintippen.',
+  anders: 'Die Kamera lässt sich nicht starten. Bitte die Nummer eintippen.',
+  leser: 'Der Strichcode-Leser konnte nicht geladen werden. Bitte die Nummer eintippen.',
+};
+
+ansichten.scan = (wurzel) => {
+  let strom = null;
+  let takt = null;
+  let laeuft = false; // ein Ergebnis wird gerade verarbeitet: nicht weiter lesen
+  let letzter = null; // zuletzt von der Kamera gelesener Text: dieselbe Nummer nicht noch einmal behandeln
+
+  const video = element('video', { class: 'kamera', playsinline: true, autoplay: true, hidden: true });
+  video.muted = true;
+  const status = element('p', { class: 'hinweis-text' }, 'Kamera wird gestartet …');
+  const feld = element('input', {
+    id: 'ean', name: 'ean', type: 'text', inputmode: 'numeric', pattern: '[0-9]*',
+    autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false',
+  });
+
+  function stoppeKamera() {
+    clearInterval(takt);
+    takt = null;
+    for (const spur of strom?.getTracks() ?? []) spur.stop();
+    strom = null;
+  }
+
+  function ohneKamera(grund) {
+    stoppeKamera();
+    video.hidden = true;
+    status.textContent = KEINE_KAMERA[grund] ?? KEINE_KAMERA.anders;
+    feld.focus();
+  }
+
+  async function verarbeite(text) {
+    if (laeuft || !wurzel.isConnected) return;
+    laeuft = true;
+    meldung('');
+    try {
+      const ergebnis = await nachScan(text, { rpc: mhdRpc, off: holeOff });
+      if (!wurzel.isConnected) return;
+      if (ergebnis.ziel === 'fehler') {
+        meldung(ergebnis.meldung);
+        feld.select();
+        return;
+      }
+      stoppeKamera();
+      wechsle(ergebnis.ziel, ergebnis.ziel === 'suche' ? { ...ergebnis.daten, hinweis: ergebnis.meldung } : ergebnis.daten);
+    } catch (fehler) {
+      letzter = null; // gleich noch einmal versuchen dürfen
+      if (!fehler.behandelt) meldung(fehlertext(fehler.message));
+    } finally {
+      laeuft = false;
+    }
+  }
+
+  async function starteKamera() {
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) return ohneKamera('sicher');
+    let neu;
+    try {
+      neu = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    } catch (fehler) {
+      return ohneKamera(fehler.name);
+    }
+    if (!wurzel.isConnected) { // Ansicht schon verlassen, während die Kamera anlief
+      for (const spur of neu.getTracks()) spur.stop();
+      return undefined;
+    }
+    strom = neu;
+    video.srcObject = neu;
+    video.hidden = false;
+    video.play().catch(() => {});
+    let lies;
+    try {
+      lies = await baueLeser();
+    } catch {
+      return ohneKamera('leser');
+    }
+    if (!wurzel.isConnected) { stoppeKamera(); return undefined; }
+    status.textContent = 'Strichcode ins Bild halten.';
+    let beschaeftigt = false;
+    takt = setInterval(async () => {
+      if (!wurzel.isConnected) { stoppeKamera(); return; } // Ansicht verlassen
+      if (beschaeftigt || laeuft || video.readyState < 2) return;
+      beschaeftigt = true;
+      try {
+        const text = await lies(video);
+        if (text && text !== letzter && !laeuft) {
+          letzter = text;
+          verarbeite(text);
+        }
+      } catch { /* dieses Bild zählt nicht */ } finally {
+        beschaeftigt = false;
+      }
+    }, TAKT_MS);
+    return undefined;
+  }
+
+  wurzel.append(
+    element('header', { class: 'kopf' },
+      element('button', { type: 'button', class: 'knopf klein', onclick: () => { stoppeKamera(); wechsle('liste'); } }, 'Zurück'),
+      element('h1', {}, 'Scannen')),
+    video,
+    status,
+    element('form', { class: 'formular', novalidate: true, onsubmit: (e) => { e.preventDefault(); verarbeite(feld.value); } },
+      element('label', { for: 'ean' }, 'Nummer eintippen'),
+      feld,
+      element('button', { type: 'submit', class: 'knopf haupt' }, 'Weiter')));
+  return starteKamera();
+};

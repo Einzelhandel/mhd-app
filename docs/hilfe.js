@@ -89,6 +89,14 @@ export async function mitSperre(wurzel, aufgabe) {
   }
 }
 
+// Ausweg, wenn eine Ansicht ihre Daten nicht laden konnte: „Erneut versuchen“ und (wenn `zurueck`
+// gegeben ist) „Zurück“. Die Fehlermeldung selbst steht oben (meldung()).
+export function ausweg(erneut, zurueck) {
+  return element('div', { class: 'ausweg' },
+    element('button', { type: 'button', class: 'knopf haupt', onclick: erneut }, 'Erneut versuchen'),
+    zurueck && element('button', { type: 'button', class: 'knopf', onclick: zurueck }, 'Zurück'));
+}
+
 // Uhrzeit (Europe/Berlin) eines Zeitstempels, z. B. '14:05'.
 export function uhrzeit(zeitstempel) {
   return new Date(zeitstempel).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
