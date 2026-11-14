@@ -162,7 +162,9 @@ Suchen Sie den Artikel selbst heraus:
 3. Tippen Sie auf den Artikel und geben Sie das MHD ein wie sonst auch.
 
 Die Suche finden Sie auch für alle anderen Artikel, wenn der Strichcode nicht
-lesbar ist. Findet die App nichts, steht dort „Nichts gefunden.“ Solche Artikel
+lesbar ist. Findet die App nichts, steht dort „Nichts gefunden.“ Mehr als 50
+Treffer zeigt sie nicht; dann steht dort „Es werden die ersten 50 Treffer gezeigt.
+Bitte genauer suchen.“ Solche Artikel
 ohne Strichcode legt die Marktleitung an (Teil 9).
 
 ## 9. Nur für die Marktleitung

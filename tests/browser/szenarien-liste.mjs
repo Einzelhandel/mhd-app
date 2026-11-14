@@ -183,4 +183,29 @@ export default [
       h.gleich(c.dialoge.length, 0, 'kein alert ausgelöst');
     },
   },
+  {
+    nr: 22,
+    name: 'Suche: bei 50 Treffern der Hinweis, genauer zu suchen',
+    async lauf(h) {
+      const { c } = h;
+      const HINWEIS = 'Es werden die ersten 50 Treffer gezeigt. Bitte genauer suchen.';
+      await h.alsMitarbeiter('Anna', '1234', {
+        vorher: () => h.sql(`insert into mhd.artikel (markt_id, name, quelle, ohne_bestand_seit, letzte_aktion_am)
+          select m.id, 'Testartikel ' || g, 'hand', mhd.heute(), mhd.heute()
+            from mhd.maerkte m, generate_series(1, 40) g where m.name = 'Demo-Markt'`),
+      });
+      await h.knopf('Suche', '.ansicht-liste');
+      await h.warteAnsicht('suche');
+      await c.warteAuf(() => document.querySelectorAll('.ansicht-suche button.zeile').length > 0, { text: 'Treffer' });
+      await h.ruhe();
+      h.gleich(await h.anzahl('.ansicht-suche button.zeile'), 50, '50 Treffer (55 Artikel im Markt)');
+      h.gleich(await h.texte('.ansicht-suche .treffer-grenze'), [HINWEIS], 'Hinweis bei 50 Treffern');
+      await h.foto('grenze');
+      await c.tippe('#suchtext', 'kefir', { enter: true });
+      await h.ruhe();
+      h.gleich(await h.texte('.ansicht-suche .zeile .name'), ['Kefir'], 'genauer gesucht: ein Treffer');
+      h.gleich(await h.anzahl('.ansicht-suche .treffer-grenze'), 0, 'kein Hinweis bei weniger Treffern');
+      h.gleich(await h.text('.ansicht-suche .inhalt'), 'Kefir500 g · Kühlregal 1MHD 15.11.26abgelaufen seit 1 Tag', 'nur die Trefferzeile, sonst nichts');
+    },
+  },
 ];

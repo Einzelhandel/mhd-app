@@ -4,6 +4,7 @@ import { element, meldung, fehlertext, ausweg } from './hilfe.js';
 import { artikelZeile } from './liste.js';
 
 const WARTEZEIT_MS = 250;
+const MAX_TREFFER = 50; // mehr liefert mhd_artikel_liste nicht
 
 // daten (optional): { suche, ohneEan, hinweis } – so kommt man vom Artikel zur selben Suche zurück;
 // hinweis ist ein Satz über der Suche (z. B. nach einem Waagen-Etikett).
@@ -29,7 +30,10 @@ ansichten.suche = async (wurzel, daten = {}) => {
       if (mein !== lauf || !wurzel.isConnected) return;
       meldung('');
       const zurueck = { ansicht: 'suche', daten: aktuelleDaten() };
-      treffer.replaceChildren(...(artikel.length
+      const grenze = artikel.length >= MAX_TREFFER
+        ? [element('p', { class: 'hinweis-text treffer-grenze' }, `Es werden die ersten ${MAX_TREFFER} Treffer gezeigt. Bitte genauer suchen.`)]
+        : [];
+      treffer.replaceChildren(...grenze, ...(artikel.length
         ? artikel.map((a) => artikelZeile(a, heute, () => wechsle('artikel', { artikel: a, zurueck })))
         : [element('p', { class: 'leer' }, 'Nichts gefunden.')]));
     } catch (fehler) {
