@@ -116,3 +116,24 @@ test('dieselbe Ansicht noch einmal (z. B. „Erneut versuchen“) ersetzt den Ei
   assert.equal(arten[2], 'ersetzen');
   assert.equal(stapel.eintraege.length, 2);
 });
+
+test('Artikel → Bearbeiten → Speichern: zurück zum Artikel mit den neuen Daten, auch nach dem nächsten Zurück-Schritt', () => {
+  const s = gehe(neuerStapel(), ['liste'], ['artikel', { artikel: { id: 1, name: 'alt' } }], ['artikel-neu', { artikel: { id: 1, name: 'alt' } }]).stapel;
+  const r = vor(s, 'artikel', { artikel: { id: 1, name: 'neu' } });
+  assert.equal(r.aktion, 'zurueck');
+  assert.equal(r.schritte, 1);
+  assert.equal(r.zeige.daten.artikel.name, 'neu');
+  // Der Eintrag im Stapel trägt die neuen Daten: popstate zeigt sie.
+  const p = zurueckZu(r.stapel, 1, MIT_PIN);
+  assert.equal(p.eintrag.daten.artikel.name, 'neu');
+});
+
+test('Liste → Einstellungen → Protokoll → zurück = Einstellungen → zurück = Liste', () => {
+  const { stapel, arten } = gehe(neuerStapel(), ['liste'], ['einstellungen'], ['protokoll']);
+  assert.deepEqual(arten, ['ersetzen', 'anlegen', 'anlegen']);
+  assert.equal(zurueckZu(stapel, 1, MIT_PIN).eintrag.ansicht, 'einstellungen');
+  assert.equal(zurueckZu(stapel, 0, MIT_PIN).eintrag.ansicht, 'liste');
+  const r = vor(stapel, 'liste');
+  assert.equal(r.aktion, 'zurueck');
+  assert.equal(r.schritte, 2);
+});

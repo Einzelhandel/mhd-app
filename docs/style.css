@@ -136,3 +136,20 @@ select:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
 
 /* Ausweg bei Ladefehlern */
 .ausweg { display: grid; gap: 10px; margin: 16px 0; }
+
+/* Marktleitung */
+.bereich-gruppe { margin: 0 0 24px; }
+.bereichkopf { margin: 16px 0 8px; padding: 10px 12px; color: #fff; background: var(--gruen); border-radius: 10px; }
+.karte { margin: 8px 0; padding: 10px 12px; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 10px; }
+.formular.karte { gap: 10px; }
+.kartenzeile { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.kartenzeile .name { flex: 1 1 8em; }
+.knopfreihe { display: flex; gap: 8px; }
+.knopfreihe .knopf { flex: 1; }
+.zahlfeld { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 400; }
+.zahlfeld input.zahl { width: 5em; text-align: center; }
+input[type="password"] { letter-spacing: 0.2em; }
+.tabelle-rahmen { overflow-x: auto; margin: 8px 0; }
+.protokoll { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.protokoll th, .protokoll td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--linie); vertical-align: top; }
+.protokoll td:first-child { white-space: nowrap; }

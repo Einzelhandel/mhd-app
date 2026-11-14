@@ -105,19 +105,17 @@ export async function serverHeute() {
   return stand.heute;
 }
 
-// Beendet die PIN-Sitzung auch in der Datenbank; scheitert das (kein Netz), geht es trotzdem weiter.
-export async function abmelden() {
+// Meldet sofort ab: PIN-Sitzung löschen und zur PIN-Auswahl wechseln. Die Datenbank erfährt es im
+// Hintergrund (mit dem kopierten Token der Sitzung); dauert das oder scheitert es, merkt der Benutzer nichts.
+export function abmelden() {
   const pin = sitzung.pinSitzung();
-  try {
-    if (pin) {
-      const aufruf = sitzung.token().then((token) => rpc('mhd_pin_abmelden', { p_sitzung: pin.sitzung }, token));
-      const frist = new Promise((ok) => setTimeout(ok, 3000));
-      aufruf.catch(() => {}); // kommt der Fehler nach der Frist, soll er nicht auffallen
-      await Promise.race([aufruf, frist]);
-    }
-  } catch { /* trotzdem abmelden */ }
   sitzung.pinSetzen(null);
   wechsle('pin');
+  if (pin) {
+    sitzung.token()
+      .then((token) => rpc('mhd_pin_abmelden', { p_sitzung: pin.sitzung }, token))
+      .catch(() => {});
+  }
 }
 
 function beiPopstate(ereignis) {

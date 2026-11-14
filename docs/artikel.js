@@ -1,5 +1,5 @@
 // Ansicht „Artikel“: Angaben zum Artikel und die Aktionen (geprüft, reduziert, aussortiert, wieder da …).
-import { ansichten, wechsle, mhdRpc, serverHeute } from './app.js';
+import { ansichten, wechsle, mhdRpc, serverHeute, ich } from './app.js';
 import { element, meldung, mitSperre, fehlertext, ausweg } from './hilfe.js';
 import { leseDatum, zeigeDatum } from './datum.js';
 import { schritte, DATUM_FEHLER } from './artikel-aktion.js';
@@ -157,6 +157,10 @@ ansichten.artikel = async (wurzel, daten) => {
     element('header', { class: 'kopf' },
       element('button', { type: 'button', class: 'knopf klein', onclick: zurueck }, 'Zurück'),
       element('h1', {}, a.name, a.aktiv === false && element('span', { class: 'marke-ruht' }, 'ruht'))),
+    ich()?.rolle === 'leitung' && element('button', {
+      type: 'button', class: 'knopf klein',
+      onclick: () => wechsle('artikel-neu', { artikel: a, artikelZurueck: daten.zurueck }),
+    }, 'Bearbeiten'),
     element('dl', { class: 'angaben' }, angaben.map(([name, wert]) => [element('dt', {}, name), element('dd', {}, wert)])),
     status && element('p', { class: `status-gross abschnitt-${a.abschnitt}` }, status),
     a.reduziert && a.bestand && element('p', { class: 'einzelheit' }, 'Bereits reduziert.'),

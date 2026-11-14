@@ -28,6 +28,8 @@ export function vor(stapel, ansicht, daten) {
     const ziel = basis.findLastIndex((e) => e.ansicht === ansicht);
     if (ziel >= 0) {
       const eintraege = basis.slice(0, ziel + 1);
+      // Kommen neue Daten mit (z. B. der gespeicherte Artikel), gelten sie ab jetzt auch für diesen Eintrag.
+      if (daten) eintraege[ziel] = { ansicht, daten };
       return {
         stapel: { eintraege, position: ziel },
         aktion: 'zurueck',

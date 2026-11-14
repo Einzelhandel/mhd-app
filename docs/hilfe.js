@@ -77,13 +77,14 @@ export function meldung(text, art = 'fehler') {
 
 // Sperrt alle Knöpfe unterhalb von `wurzel`, solange `aufgabe` läuft (kein doppeltes Absenden).
 // Fehler werden angezeigt, es sei denn, sie sind schon behandelt (z. B. Wechsel zur Anmeldung).
-export async function mitSperre(wurzel, aufgabe) {
+// `zeigeFehler` (optional) nimmt den Fehlertext statt der Meldung oben, z. B. für eine Stelle am Formular.
+export async function mitSperre(wurzel, aufgabe, zeigeFehler = meldung) {
   const knoepfe = [...wurzel.querySelectorAll('button')].filter((k) => !k.disabled);
   for (const k of knoepfe) k.disabled = true;
   try {
     return await aufgabe();
   } catch (fehler) {
-    if (!fehler.behandelt) meldung(fehlertext(fehler.message));
+    if (!fehler.behandelt) zeigeFehler(fehlertext(fehler.message));
   } finally {
     for (const k of knoepfe) k.disabled = false;
   }

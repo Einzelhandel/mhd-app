@@ -9,5 +9,7 @@ import './artikel.js';
 import './suche.js';
 import './scan.js';
 import './artikel-neu.js';
+import './einstellungen.js';
+import './protokoll.js';
 
 start();
