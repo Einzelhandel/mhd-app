@@ -2,7 +2,8 @@
 // und die Entscheidung, was nach einem gelesenen Strichcode geschieht.
 //
 // Strichcode-Leser: Wo der Browser einen BarcodeDetector hat, der EAN-13 kann (Chrome auf Android), wird er
-// benutzt; scheitert er 5-mal in Folge, übernimmt die Bibliothek. Sonst wird gleich vendor/zxing.min.js nachgeladen. Diese Datei ist eine unveränderte Kopie von
+// benutzt; scheitert er 5-mal in Folge, übernimmt die Bibliothek. Sonst wird gleich vendor/zxing.min.js
+// nachgeladen. Diese Datei ist eine unveränderte Kopie von
 // node_modules/@zxing/library/umd/index.min.js aus dem npm-Paket @zxing/library 0.23.0
 // (Lizenz: vendor/LICENSE-zxing.txt, Kopie von node_modules/@zxing/library/LICENSE).
 import { ansichten, wechsle, mhdRpc } from './app.js';
