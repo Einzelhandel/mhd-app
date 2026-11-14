@@ -192,7 +192,8 @@ Die Marktleitung sieht oben auf der Liste zusätzlich die Knöpfe „Protokoll�
 
 Tippen Sie bei dem Namen auf „Bearbeiten“ und geben Sie bei „Neue PIN (leer lassen
 = unverändert)“ eine neue PIN ein. Tippen Sie auf „Speichern“. Eine neue PIN hebt
-auch die Sperre nach fünf Fehlversuchen auf. Bei einem gesperrten Mitarbeiter
+auch die Sperre nach fünf Fehlversuchen auf und meldet den Mitarbeiter auf allen
+Handys ab; er meldet sich danach mit der neuen PIN an. Bei einem gesperrten Mitarbeiter
 steht in der Liste „gesperrt“.
 
 Hat die einzige Marktleitung ihre PIN vergessen, kann das nur die Person ändern,

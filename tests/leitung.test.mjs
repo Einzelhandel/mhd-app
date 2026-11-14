@@ -123,6 +123,19 @@ test('Namen von Mitarbeitern und Warengruppen: höchstens 40 Zeichen, sonst NAME
   await assert.rejects(u.db.query('update mhd.warengruppen set name = $1 where id = $2', ['G'.repeat(41), gruppe]), /check/);
 });
 
+test('neue PIN beendet die Sitzungen dieses Mitarbeiters; ohne neue PIN bleiben sie', async () => {
+  const u = await umgebung();
+  const zweite = await pin(u.db, u.m.userId, u.berta, '1234');           // Berta an zwei Geräten
+  await u.speichern(u.berta, { name: 'Berta B.', rolle: 'mitarbeiter', aktiv: true });   // nur der Name
+  assert.equal((await u.gruppen(u.sitzung)).length, 11);
+  await u.speichern(u.berta, { name: 'Berta B.', rolle: 'mitarbeiter', aktiv: true, pin: '5555' });
+  assert.equal((await u.db.query('select count(*)::int as n from mhd.sitzungen where mitarbeiter_id = $1', [u.berta])).rows[0].n, 0);
+  await assert.rejects(u.gruppen(u.sitzung), /PIN_ABGELAUFEN/);
+  await assert.rejects(u.gruppen(zweite), /PIN_ABGELAUFEN/);
+  assert.equal((await u.gruppen()).length, 11);                  // die Sitzung der Leitung bleibt
+  assert.equal((await u.anmelden(u.berta, '5555')).ok, true);
+});
+
 test('deaktivierter Mitarbeiter verliert seine Sitzung (PIN_ABGELAUFEN) und kann sich nicht anmelden', async () => {
   const u = await umgebung();
   assert.equal((await u.gruppen(u.sitzung)).length, 11);

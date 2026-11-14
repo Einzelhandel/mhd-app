@@ -101,7 +101,8 @@ Anmeldung in zwei Stufen:
 2. **Mitarbeiter und PIN** (4 bis 6 Ziffern) innerhalb des Marktes. Jede Aktion
    wird einem Mitarbeiter zugeordnet. PINs liegen nur als Hash vor
    (`pgcrypto`, bcrypt). Nach 5 falschen Eingaben ist der Mitarbeiter 15 Minuten
-   gesperrt; eine neue PIN durch die Marktleitung hebt die Sperre auf. Nach 30
+   gesperrt; eine neue PIN durch die Marktleitung hebt die Sperre auf und beendet
+   die offenen PIN-Sitzungen dieses Mitarbeiters. Nach 30
    Minuten ohne Aktion verlangt die App die PIN erneut; die PIN-Sitzung endet
    außerdem mit dem Tab. Gespeichert wird je Mitarbeiter nur ein Anzeigename.
 

@@ -814,9 +814,10 @@ $$;
 
 -- Legt einen Mitarbeiter an (p_id null) oder ändert ihn.
 -- p_daten: { name (höchstens 40 Zeichen), rolle, aktiv, pin }. Die PIN ist beim Anlegen Pflicht; beim Ändern
--- optional, setzt sie neu und hebt Sperre und Fehlversuche auf. Die letzte aktive
+-- optional, setzt sie neu, hebt Sperre und Fehlversuche auf und beendet die Sitzungen
+-- des Mitarbeiters (wer die alte PIN kannte, ist damit draußen). Die letzte aktive
 -- Leitung darf weder herabgestuft noch deaktiviert werden. Deaktivieren beendet
--- die Sitzungen des Mitarbeiters. Mitarbeiter werden nie gelöscht (Protokoll).
+-- ebenfalls die Sitzungen des Mitarbeiters. Mitarbeiter werden nie gelöscht (Protokoll).
 create or replace function public.mhd_mitarbeiter_speichern(p_sitzung uuid, p_id bigint, p_daten jsonb)
 returns bigint
 language plpgsql security definer
@@ -879,7 +880,7 @@ begin
     raise exception 'NAME_VERGEBEN';
   end;
 
-  if not v_aktiv then
+  if not v_aktiv or v_pin is not null then
     delete from mhd.sitzungen where mitarbeiter_id = v_alt.id;
   end if;
   return v_alt.id;
