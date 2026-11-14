@@ -1,7 +1,7 @@
 // Was nach einem Scan (oder eingetippter Nummer) geschieht: reine Entscheidung ohne Kamera und DOM.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nachScan } from '../docs/scan.js';
+import { nachScan, leserWahl, mitErsatz } from '../docs/scan.js';
 
 const BEKANNT = { id: 7, name: 'Vollmilch', ean: '4000000000006' };
 
@@ -71,4 +71,37 @@ test('ein Fehler der Datenbank wird weitergereicht (kein Aufruf von Open Food Fa
     off: d.off_,
   }), /PIN_ABGELAUFEN/);
   assert.equal(d.off.length, 0);
+});
+
+// ---- Wahl des Strichcode-Lesers (reine Logik)
+
+test('leserWahl: BarcodeDetector nur, wenn er EAN-13 kann; sonst die mitgelieferte Bibliothek', () => {
+  assert.equal(leserWahl(['ean_13', 'ean_8', 'qr_code']), 'detektor');
+  assert.equal(leserWahl(['ean_13']), 'detektor');
+  assert.equal(leserWahl(['qr_code', 'ean_8']), 'zxing');
+  assert.equal(leserWahl([]), 'zxing');      // z. B. Chrome auf dem Desktop ohne Erkennung
+  assert.equal(leserWahl(null), 'zxing');    // kein BarcodeDetector oder getSupportedFormats scheitert
+});
+
+test('mitErsatz: nach 5 Fehlern in Folge liest der Ersatz; ein gelungener Versuch setzt den Zähler zurück', async () => {
+  let fehler = 0;
+  let geholt = 0;
+  const erster = async (bild) => { if (bild === 'kaputt') { fehler += 1; throw new Error('detect'); } return bild === 'leer' ? null : 'erster'; };
+  const lies = mitErsatz(erster, async () => { geholt += 1; return async () => 'ersatz'; });
+  for (let i = 0; i < 4; i++) assert.equal(await lies('kaputt'), null);
+  assert.equal(await lies('leer'), null);           // nichts erkannt ist kein Fehler: Zähler wieder 0
+  for (let i = 0; i < 4; i++) assert.equal(await lies('kaputt'), null);
+  assert.equal(geholt, 0);
+  assert.equal(await lies('kaputt'), null);         // der fünfte Fehler in Folge
+  assert.equal(geholt, 1);
+  assert.equal(await lies('kaputt'), 'ersatz');
+  assert.equal(await lies('leer'), 'ersatz');
+  assert.equal(geholt, 1);
+  assert.equal(fehler, 9);                          // nach dem Umschalten wird der erste Leser nicht mehr gefragt
+});
+
+test('mitErsatz: lässt sich der Ersatz nicht laden, scheitert der Leser mit LESER_FEHLT', async () => {
+  const lies = mitErsatz(async () => { throw new Error('detect'); }, async () => { throw new Error('ZXING'); });
+  for (let i = 0; i < 4; i++) assert.equal(await lies('x'), null);
+  await assert.rejects(lies('x'), { message: 'LESER_FEHLT' });
 });

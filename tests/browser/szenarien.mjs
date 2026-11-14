@@ -9,12 +9,13 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { starteServer } from '../server.mjs';
 import { starteBrowser, BROWSER } from './cdp.mjs';
-import { baueRahmen } from './rahmen.mjs';
+import { baueRahmen, NETZ_ZAEHLER } from './rahmen.mjs';
 import anmeldung from './szenarien-anmeldung.mjs';
 import liste from './szenarien-liste.mjs';
 import leitung from './szenarien-leitung.mjs';
 import verlauf from './szenarien-verlauf.mjs';
 import verbindung from './szenarien-verbindung.mjs';
+import kamera from './szenarien-kamera.mjs';
 
 if (!BROWSER) {
   console.error('Kein Chrome oder Edge gefunden. Der Browser-Test braucht einen von beiden (Chrome, Chromium oder Edge).');
@@ -25,7 +26,7 @@ const FOTOS = fileURLToPath(new URL('./fotos/', import.meta.url));
 const filter = (process.argv[2] ?? '').toLowerCase();
 const GRENZE_MS = 120000;
 
-const alle = [...anmeldung, ...liste, ...leitung, ...verlauf, ...verbindung].sort((a, b) => a.nr - b.nr);
+const alle = [...anmeldung, ...liste, ...leitung, ...verlauf, ...verbindung, ...kamera].sort((a, b) => a.nr - b.nr);
 const gewaehlt = alle.filter((x) => !filter || x.name.toLowerCase().includes(filter));
 if (!gewaehlt.length) {
   console.error(`Kein Szenario passt zum Filter „${filter}“.`);
@@ -41,11 +42,7 @@ const notAus = (e) => { console.error(e); c.notAus(); process.exit(2); };
 process.on('uncaughtException', notAus);
 process.on('unhandledRejection', notAus);
 
-// Zählt laufende Anfragen der Seite („Netz ruhig“); wird vor jedem Laden einer Seite eingespielt.
-await c.sende('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
-  window.__offen = 0; const f = window.fetch.bind(window);
-  window.fetch = (...a) => { window.__offen++; return f(...a).finally(() => { window.__offen--; }); };
-})();` });
+await c.sende('Page.addScriptToEvaluateOnNewDocument', { source: NETZ_ZAEHLER });
 
 const h = baueRahmen({ s, c });
 const ergebnisse = [];

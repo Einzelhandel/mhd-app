@@ -1,8 +1,8 @@
 // Ansicht „Scannen“: Kamera, Handeingabe (auch für Handscanner, die als Tastatur arbeiten)
 // und die Entscheidung, was nach einem gelesenen Strichcode geschieht.
 //
-// Strichcode-Leser: Wo der Browser einen BarcodeDetector hat (Chrome auf Android), wird er benutzt.
-// Sonst wird vendor/zxing.min.js nachgeladen. Diese Datei ist eine unveränderte Kopie von
+// Strichcode-Leser: Wo der Browser einen BarcodeDetector hat, der EAN-13 kann (Chrome auf Android), wird er
+// benutzt; scheitert er 5-mal in Folge, übernimmt die Bibliothek. Sonst wird gleich vendor/zxing.min.js nachgeladen. Diese Datei ist eine unveränderte Kopie von
 // node_modules/@zxing/library/umd/index.min.js aus dem npm-Paket @zxing/library 0.23.0
 // (Lizenz: vendor/LICENSE-zxing.txt, Kopie von node_modules/@zxing/library/LICENSE).
 import { ansichten, wechsle, mhdRpc } from './app.js';
@@ -12,6 +12,7 @@ import { holeOff } from './off.js';
 
 const TAKT_MS = 200;
 const FORMATE = ['ean_13', 'ean_8', 'upc_a'];
+const MAX_FEHLER = 5; // so viele Fehler von detect() in Folge, dann die Bibliothek
 const NICHT_LESBAR = 'Strichcode nicht lesbar. Bitte noch einmal scannen oder Nummer eintippen.';
 const WAAGE = 'Waagen-Etikett: Artikel bitte aus der Liste wählen.';
 
@@ -29,6 +30,32 @@ export async function nachScan(text, { rpc, off }) {
 
 // ---- Kamera ----
 
+// Welcher Leser: 'detektor' nur, wenn der BarcodeDetector EAN-13 kann (`formate` aus getSupportedFormats(),
+// null ohne BarcodeDetector), sonst 'zxing'. Mancher Browser kennt den Konstruktor, erkennt aber nichts.
+export function leserWahl(formate) {
+  return Array.isArray(formate) && formate.includes('ean_13') ? 'detektor' : 'zxing';
+}
+
+// Liest mit `erster`; nach MAX_FEHLER Fehlern in Folge wird der Ersatz einmal geholt und liest von da an.
+// „Nichts erkannt“ (null) zählt als gelungener Versuch. Lässt sich der Ersatz nicht holen: Fehler LESER_FEHLT.
+export function mitErsatz(erster, holeErsatz, grenze = MAX_FEHLER) {
+  let fehler = 0;
+  let ersatz = null;
+  return async (bild) => {
+    if (ersatz) return ersatz(bild);
+    try {
+      const text = await erster(bild);
+      fehler = 0;
+      return text;
+    } catch {
+      fehler += 1;
+      if (fehler < grenze) return null;
+      try { ersatz = await holeErsatz(); } catch { throw new Error('LESER_FEHLT'); }
+      return null;
+    }
+  };
+}
+
 function ladeZxing() {
   if (globalThis.ZXing) return Promise.resolve(globalThis.ZXing);
   return new Promise((ok, nein) => {
@@ -39,14 +66,24 @@ function ladeZxing() {
   });
 }
 
+async function unterstuetzteFormate() {
+  if (!('BarcodeDetector' in window)) return null;
+  try { return await window.BarcodeDetector.getSupportedFormats(); } catch { return null; }
+}
+
 // Liefert eine Funktion video → gelesener Text oder null.
 async function baueLeser() {
-  if ('BarcodeDetector' in window) {
+  const formate = await unterstuetzteFormate();
+  if (leserWahl(formate) === 'detektor') {
     try {
-      const detektor = new window.BarcodeDetector({ formats: FORMATE });
-      return async (video) => (await detektor.detect(video))[0]?.rawValue ?? null;
-    } catch { /* Formate nicht unterstützt: Bibliothek nehmen */ }
+      const detektor = new window.BarcodeDetector({ formats: FORMATE.filter((f) => formate.includes(f)) });
+      return mitErsatz(async (video) => (await detektor.detect(video))[0]?.rawValue ?? null, baueZxing);
+    } catch { /* Konstruktor scheitert: Bibliothek nehmen */ }
   }
+  return baueZxing();
+}
+
+async function baueZxing() {
   const Z = await ladeZxing();
   const hinweise = new Map([[Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A]]]);
   // Das Bild (Canvas, Graustufen) baut BrowserMultiFormatReader. Gelesen wird mit dem 1D-Leser selbst: Der
@@ -63,7 +100,7 @@ const KEINE_KAMERA = {
   NotAllowedError: 'Die Kamera ist nicht erlaubt. Bitte in den Einstellungen des Browsers freigeben oder die Nummer eintippen.',
   NotFoundError: 'Es wurde keine Kamera gefunden. Bitte die Nummer eintippen.',
   anders: 'Die Kamera lässt sich nicht starten. Bitte die Nummer eintippen.',
-  leser: 'Der Strichcode-Leser konnte nicht geladen werden. Bitte die Nummer eintippen.',
+  leser: 'Scannen geht auf diesem Gerät nicht. Bitte die Nummer eintippen.',
 };
 
 ansichten.scan = (wurzel) => {
@@ -98,6 +135,8 @@ ansichten.scan = (wurzel) => {
     if (laeuft || !wurzel.isConnected) return;
     laeuft = true;
     meldung('');
+    const vorher = status.textContent;
+    status.textContent = 'Artikel wird gesucht …';
     try {
       const ergebnis = await nachScan(text, { rpc: mhdRpc, off: holeOff });
       if (!wurzel.isConnected) return;
@@ -113,6 +152,7 @@ ansichten.scan = (wurzel) => {
       if (!fehler.behandelt) meldung(fehlertext(fehler.message));
     } finally {
       laeuft = false;
+      if (status.textContent === 'Artikel wird gesucht …') status.textContent = vorher;
     }
   }
 
@@ -151,7 +191,9 @@ ansichten.scan = (wurzel) => {
           letzter = text;
           verarbeite(text);
         }
-      } catch { /* dieses Bild zählt nicht */ } finally {
+      } catch (fehler) {
+        if (fehler.message === 'LESER_FEHLT') ohneKamera('leser'); // auch die Bibliothek lässt sich nicht laden
+      } finally {
         beschaeftigt = false;
       }
     }, TAKT_MS);

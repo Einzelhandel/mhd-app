@@ -25,7 +25,8 @@ const profilWeg = (profil) => {
 
 const pause = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
-export async function starteBrowser({ breite = 390, hoehe = 844 } = {}) {
+// zusatz: weitere Schalter für den Browser (z. B. eine künstliche Kamera).
+export async function starteBrowser({ breite = 390, hoehe = 844, zusatz = [] } = {}) {
   if (!BROWSER) throw new Error('Kein Chrome oder Edge gefunden');
   const profil = mkdtempSync(join(tmpdir(), 'mhd-cdp-'));
   // Das Passwortfeld der Markt-Anmeldung würde sonst die Passwortverwaltung auslösen, die danach Eingaben verschluckt.
@@ -37,7 +38,7 @@ export async function starteBrowser({ breite = 390, hoehe = 844 } = {}) {
   const prozess = spawn(BROWSER, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
     '--remote-debugging-port=0', `--user-data-dir=${profil}`, '--password-store=basic', '--use-mock-keychain',
     '--hide-scrollbars', '--disable-extensions', '--disable-renderer-backgrounding',
-    `--window-size=${breite},${hoehe}`, '--lang=de-DE', 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
+    `--window-size=${breite},${hoehe}`, '--lang=de-DE', ...zusatz, 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
   const wsBrowser = await new Promise((ok, fehler) => {
     let text = '';
     const uhr = setTimeout(() => fehler(new Error(`Der Browser meldet keinen DevTools-Port:\n${text}`)), 20000);

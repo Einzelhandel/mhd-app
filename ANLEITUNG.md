@@ -53,7 +53,8 @@ Einräumen (Teil 6).
 
 1. Tippen Sie unten auf „Scannen“.
 2. Erlauben Sie beim ersten Mal der App die Kamera.
-3. Halten Sie die Kamera auf den Strichcode. Die App liest ihn selbst.
+3. Halten Sie die Kamera auf den Strichcode. Die App liest ihn selbst. Während sie
+   den Artikel sucht, steht dort „Artikel wird gesucht …“.
 4. Die App zeigt den Artikel. Tippen Sie in das Feld „Vorderstes MHD“ und geben
    Sie das MHD der Ware ein, die ganz vorn steht.
 5. Tippen Sie auf „Geprüft“.
@@ -65,7 +66,9 @@ ergänzt die App. Für den 20.11.26 tippen Sie `201126`. Sie können auch
 **Geht die Kamera nicht?** Tippen Sie die Nummer unter dem Strichcode in das Feld
 „Nummer eintippen“ und dann auf „Weiter“. Lässt sich ein Strichcode nicht lesen,
 sagt die App „Strichcode nicht lesbar. Bitte noch einmal scannen oder Nummer
-eintippen.“
+eintippen.“ Steht dort „Scannen geht auf diesem Gerät nicht. Bitte die Nummer
+eintippen.“, kann dieses Handy keine Strichcodes erkennen; die Nummer eintippen
+geht immer.
 
 **Ist das MHD schon abgelaufen?** Dann fragt die App „Dieses MHD ist abgelaufen.
 Ware aussortieren?“ Tippen Sie auf „Ja, aussortieren“, wenn die Ware raus muss.

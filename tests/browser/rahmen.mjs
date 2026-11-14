@@ -16,6 +16,13 @@ export const tag = (n, von = HEUTE) => new Date(Date.parse(`${von}T00:00:00Z`) +
 // So tippt man es ins Feld: '2026-12-16' → '16.12.26'
 export const eingabe = (isoDatum) => `${isoDatum.slice(8, 10)}.${isoDatum.slice(5, 7)}.${isoDatum.slice(2, 4)}`;
 
+// Zählt laufende Anfragen der Seite („Netz ruhig“, h.ruhe); wird vor jedem Laden einer Seite eingespielt:
+// c.sende('Page.addScriptToEvaluateOnNewDocument', { source: NETZ_ZAEHLER }).
+export const NETZ_ZAEHLER = `(() => {
+  window.__offen = 0; const f = window.fetch.bind(window);
+  window.fetch = (...a) => { window.__offen++; return f(...a).finally(() => { window.__offen--; }); };
+})();`;
+
 export function baueRahmen({ s, c }) {
   const h = { s, c, fehler: [], notizen: [], pruefungen: 0, fotoVorsatz: '', fotos: [] };
 

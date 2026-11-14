@@ -94,8 +94,16 @@ export default [
       await h.foto('scan');
       await h.passtInsFenster('Scannen');
 
-      await c.tippe('#ean', '4311501646854', { enter: true });
-      await h.warteAnsicht('artikel');
+      h.s.verzoegere(1500, { nur: 'mhd_artikel_suchen' }); // langsame Suche: der Hinweis muss zu sehen sein
+      try {
+        await c.tippe('#ean', '4311501646854', { enter: true });
+        const gesehen = await c.warteAuf(() => document.querySelector('.ansicht-scan .hinweis-text')?.textContent === 'Artikel wird gesucht …', { text: 'Hinweis während der Suche', ms: 1400 })
+          .then(() => true, () => false);
+        h.pruefe(gesehen, 'Hinweis „Artikel wird gesucht …“, solange die Suche läuft');
+        await h.warteAnsicht('artikel');
+      } finally {
+        h.s.verzoegere(0);
+      }
       await h.ruhe();
       h.gleich(await h.text('.ansicht-artikel h1'), 'Kefir', 'bekannte Nummer öffnet den Artikel');
       await h.knopf('Zurück', '.ansicht-artikel');
