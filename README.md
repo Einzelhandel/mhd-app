@@ -32,7 +32,8 @@ npm start
 `<organisation>` ist ein Platzhalter und durch die tatsächliche Adresse des
 Repositorys zu ersetzen.
 
-Danach im Browser `http://localhost:8123/` öffnen. Der Testserver führt die echte
+Der Server meldet `http://127.0.0.1:8123/`; ebenso geht `http://localhost:8123/`. Diese Adresse im Browser öffnen.
+Der Testserver führt die echte
 Oberfläche (`docs/`) gegen die echten SQL-Funktionen aus, in einer eingebauten
 Datenbank (PGlite) mit erfundenen Demo-Daten. Es wird nichts in die Cloud
 geschickt; der Server hört nur auf diesem Rechner. Beendet wird er mit Strg+C.
@@ -67,7 +68,8 @@ npm run test:browser
 - `npm run test:browser`: Durchklick-Szenarien in Chrome oder Edge ohne Fenster
   (als Handy 390 x 844 mit Touch) gegen den lokalen Testserver. Der Test sucht
   Chrome oder Edge an den üblichen Orten unter `C:/Program Files`. Er schreibt
-  Fotos in einen Ordner `fotos` unter `tests/browser/` (wird beim Lauf angelegt, nicht im Repository). Der Test startet seinen
+  Fotos in einen Ordner `fotos` unter `tests/browser/` (wird beim Lauf angelegt,
+  nicht im Repository). Der Test startet seinen
   eigenen Server auf einem freien Port; ein laufendes `npm start` stört nicht.
 
 Erwartet wird: alle Tests grün. Die Anzahl ändert sich mit dem Code und steht
