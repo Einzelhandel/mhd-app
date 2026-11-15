@@ -90,7 +90,7 @@ Sie sehen das MHD und die Knöpfe.
 | **Abgelaufen / versäumt** | rot | Das MHD ist vorbei, oder ein Termin wurde nicht erledigt (die App schreibt dazu, was versäumt wurde und seit wie vielen Tagen). | Sofort ins Regal schauen. Abgelaufene Ware raus, dann „Aussortiert“. War nur eine Prüfung oder das Reduzieren versäumt, holen Sie es jetzt nach. |
 | **Läuft heute ab** | orange | Die Ware hat heute ihr MHD. | Ware heute rausnehmen. Danach tippen Sie auf „Aussortiert“. |
 | **Heute prüfen** | orange | Heute ist die Kontrolle dran. | Ins Regal schauen, das vorderste MHD ablesen und auf „Geprüft“ tippen. |
-| **Heute reduzieren** | gelb | Die Ware soll jetzt im Preis herabgesetzt werden. | Ware reduzieren, danach auf „Reduziert“ tippen. |
+| **Heute reduzieren** | gelb | Die Ware soll jetzt im Preis herabgesetzt werden. | Ware reduzieren, danach auf „Reduziert“ tippen. Der Artikel bleibt hier bis zum Tag vor dem MHD stehen, bis das jemand getan hat, auch wenn er zwischendurch geprüft wurde. |
 | **Ohne Bestand – wieder da?** | grau | Der Artikel war zuletzt nicht im Regal. Die App fragt nach, ob er wieder da ist. Steht dabei „MHD fehlt noch“, wurde der Artikel angelegt, aber sein MHD nie gespeichert. | Nachsehen: Ist er wieder da, tippen Sie „Wieder da“. Sonst „Weiter ohne Bestand“. Bei „MHD fehlt noch“ geben Sie das MHD ein und tippen auf „MHD speichern“. Wurde der Artikel versehentlich angelegt, tippen Sie auf „Aus dem Sortiment nehmen“. |
 
 Der rote Abschnitt steht immer oben. Ein Artikel fällt nie von allein von der
@@ -107,7 +107,9 @@ Bei einem Artikel mit Ware im Regal gibt es drei Knöpfe:
 
 - **„Geprüft“:** Sie haben nachgesehen. Stimmt das MHD im Feld noch, tippen Sie
   nur auf „Geprüft“. Ist frischere Ware nachgerückt oder sieht das MHD anders aus,
-  tippen Sie zuerst das neue MHD in das Feld.
+  tippen Sie zuerst das neue MHD in das Feld. Soll die Ware nach der Regel ihrer
+  Warengruppe schon reduziert sein und ist sie es noch nicht, steht der Artikel
+  danach unter „Heute reduzieren“.
 - **„Reduziert“:** Die Ware ist im Preis herabgesetzt. Das MHD im Feld bleibt, wie
   es ist. Wollen Sie auch das MHD ändern, tippen Sie es vorher ein.
 - **„Aussortiert“:** Ware wurde aus dem Regal genommen. Die App fragt „Ware
@@ -210,7 +212,10 @@ die die App für Sie eingerichtet hat.
   prüfen“.
 - **„Reduzieren“:** So viele Tage vor dem MHD kommt er auf „Heute reduzieren“.
   Diese Zahl darf nicht größer sein als bei „Prüfen“, sonst sagt die App „Die
-  Regel ist ungültig: Reduzieren darf nicht früher kommen als Prüfen.“
+  Regel ist ungültig: Reduzieren darf nicht früher kommen als Prüfen.“ Wird ein
+  Artikel erst in diesem Zeitraum gescannt oder geprüft, steht er sofort unter
+  „Heute reduzieren“ und bleibt dort bis zum Tag vor dem MHD, solange niemand auf
+  „Reduziert“ getippt hat.
 - **„Spätestens alle“:** Auch wenn das MHD noch weit weg ist, wird der Artikel
   nach so vielen Tagen wieder geprüft.
 

@@ -448,6 +448,9 @@ $$;
 --   mit Bestand:  MHD vor heute            -> abgelaufen (versaeumt „abgelaufen“)
 --                 Termin vor heute         -> abgelaufen (versaeumt = Art des Termins)
 --                 Termin heute             -> Abschnitt = Art des Termins
+--                 Reduzieren steht offen   -> reduzieren, an jedem Tag vor dem MHD, solange
+--                   nicht reduziert ist und die letzte Aktion am oder nach MHD - Reduzier-Vorlauf
+--                   lag (nicht bei versäumtem Termin und nicht am MHD-Tag)
 --   ohne Bestand: noch nie eine Aktion (neu angelegt, MHD fehlt) -> sofort ohne_bestand
 --                 (versaeumt „mhd_fehlt“, seit_tagen ab ohne_bestand_seit)
 --                 seit pruef_vorlauf_tage Tagen (mindestens 1, höchstens max_intervall_tage)
@@ -490,6 +493,15 @@ begin
         v_seit := v_heute - v_termin.datum;
       elsif v_termin.datum = v_heute then
         v_abschnitt := v_termin.art;
+      end if;
+      -- Reduzieren steht offen: Die letzte Aktion lag schon im Reduzier-Zeitraum, reduziert
+      -- wurde aber nicht. mhd.termin kennt nur Termine nach der letzten Aktion; ohne diese
+      -- Regel ginge das Reduzieren verloren (z. B. beim ersten Scannen kurz vor dem MHD).
+      -- Ein versäumter Termin (rot) und „läuft heute ab“ gehen vor.
+      if (v_abschnitt is null or v_abschnitt = 'pruefen') and not p_artikel.reduziert
+         and p_artikel.mhd > v_heute
+         and p_artikel.mhd - v_reduzier <= coalesce(p_artikel.letzte_aktion_am, v_heute - 1) then
+        v_abschnitt := 'reduzieren';
       end if;
     end if;
   elsif p_artikel.aktiv and not p_artikel.bestand and p_artikel.letzte_aktion_am is null then
