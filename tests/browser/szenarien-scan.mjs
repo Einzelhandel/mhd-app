@@ -40,6 +40,11 @@ export default [
       h.gleich(await c.werte(() => document.getElementById('name').value), '', 'Vorschlag ist leer');
       h.pruefe(!(await h.text('.ansicht-artikel-neu')).includes('Open Food Facts'), 'kein Hinweis auf Open Food Facts');
       h.pruefe((await h.text('.ansicht-artikel-neu')).includes('Strichcode 4000000000006'), 'Strichcode steht im Formular');
+      h.gleich(await h.text('.ansicht-artikel-neu .unbekannt'),
+        'Dieser Strichcode ist noch nicht in der App. Neue Ware? Dann hier anlegen. Falsche Ware gegriffen? Dann „Zurück“.',
+        'Hinweis: Strichcode ist noch nicht in der App');
+      await h.passtInsFenster('Neuer Artikel mit Hinweis');
+      await h.foto('hinweis-unbekannt');
       await h.knopf('Speichern', '.ansicht-artikel-neu');
       h.gleich(await h.meldung(), 'Bitte einen Namen eingeben.', 'ohne Namen kein Speichern');
       await c.tippe('#name', 'Testbrot');

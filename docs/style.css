@@ -68,6 +68,7 @@ select:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
 .schalter { display: flex; align-items: center; gap: 12px; min-height: 56px; font-weight: 400; }
 .schalter input { width: 28px; height: 28px; }
 .hinweis-text { color: var(--grau); margin: 4px 0; }
+.unbekannt { margin: 8px 0; padding: 10px 12px; background: var(--flaeche); border: 1px solid var(--linie); border-left: 8px solid var(--orange); border-radius: 10px; }
 .feldfehler { margin: 0; color: var(--rot); font-weight: 600; }
 
 /* Meldungen */

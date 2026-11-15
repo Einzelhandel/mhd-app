@@ -46,6 +46,11 @@ ansichten['artikel-neu'] = async (wurzel, daten) => {
 
   const hinweis = !bearbeiten && vorschlag && element('p', { class: 'hinweis-text' }, 'Vorschlag aus Open Food Facts – bitte prüfen');
   const ean = bearbeiten ? bearbeiten.ean : daten.ean;
+  // Nach einem Scan: deutlich sagen, dass die App diese Ware nicht kennt. Wer nur nachsehen wollte, ob er die
+  // richtige Ware in der Hand hat, legt sonst aus Versehen einen zweiten Artikel an.
+  const unbekannt = !bearbeiten && daten.ean && element('p', { class: 'unbekannt' },
+    element('strong', {}, 'Dieser Strichcode ist noch nicht in der App.'),
+    ' Neue Ware? Dann hier anlegen. Falsche Ware gegriffen? Dann „Zurück“.');
   const strichcode = ean && element('p', { class: 'einzelheit' }, `Strichcode ${ean}`);
 
   // Ein anderer Mitarbeiter war schneller: den vorhandenen Artikel öffnen, ohne Fehlermeldung.
@@ -100,6 +105,7 @@ ansichten['artikel-neu'] = async (wurzel, daten) => {
 
   wurzel.append(...[
     kopf,
+    unbekannt,
     hinweis,
     strichcode,
     element('form', { class: 'formular', novalidate: true, onsubmit: (e) => { e.preventDefault(); speichern(); } },

@@ -138,7 +138,9 @@ Mit „Zurück“ oben (oder der Zurück-Taste des Handys) gehen Sie eine Ansich
 ## 7. Neue Ware beim Einräumen scannen
 
 Scannen Sie einen Artikel, den die App noch nicht kennt, öffnet sich „Neuer
-Artikel“.
+Artikel“. Oben steht dann „Dieser Strichcode ist noch nicht in der App.“ Wollten
+Sie nur nachsehen, ob Sie die richtige Ware in der Hand haben, tippen Sie auf
+„Zurück“; es wird nichts angelegt.
 
 1. Oft hat die App schon Angaben gefunden. Dann steht dort „Vorschlag aus Open
    Food Facts – bitte prüfen“. Lesen Sie Name, Marke und Menge und verbessern Sie
