@@ -123,7 +123,8 @@ Bei einem Artikel **ohne Bestand** sind die Knöpfe andere:
 - **„Wieder da“:** Es steht wieder Ware im Regal. Tippen Sie vorher das MHD der
   vordersten Ware ein.
 - **„Weiter ohne Bestand“:** Der Artikel ist noch nicht wieder da. Die App fragt
-  später noch einmal nach.
+  nach so vielen Tagen noch einmal nach, wie der Prüf-Vorlauf der Warengruppe
+  beträgt (mindestens nach einem Tag).
 - **„Aus dem Sortiment nehmen“:** Der Artikel wird nicht mehr geführt. Das geht nur
   bei einem Artikel ohne Bestand. Scannen Sie ihn später wieder, ist er zurück.
 
@@ -210,8 +211,11 @@ die die App für Sie eingerichtet hat.
   Diese Zahl darf nicht größer sein als bei „Prüfen“, sonst sagt die App „Die
   Regel ist ungültig: Reduzieren darf nicht früher kommen als Prüfen.“
 - **„Spätestens alle“:** Auch wenn das MHD noch weit weg ist, wird der Artikel
-  nach so vielen Tagen wieder geprüft. Ebenso fragt die App nach so vielen Tagen
-  bei Artikeln ohne Bestand nach.
+  nach so vielen Tagen wieder geprüft.
+
+Der Wert bei „Prüfen“ steuert außerdem, wann die App bei Artikeln ohne Bestand
+nachfragt: nach so vielen Tagen, wie der Prüf-Vorlauf der Warengruppe beträgt,
+mindestens nach einem Tag, aber nie später als bei „Spätestens alle“.
 
 Zusätzlich steht jeder Artikel am Tag seines MHD unter „Läuft heute ab“.
 

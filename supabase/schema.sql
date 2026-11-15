@@ -450,7 +450,8 @@ $$;
 --                 Termin heute             -> Abschnitt = Art des Termins
 --   ohne Bestand: noch nie eine Aktion (neu angelegt, MHD fehlt) -> sofort ohne_bestand
 --                 (versaeumt „mhd_fehlt“, seit_tagen ab ohne_bestand_seit)
---                 seit mehr als max_intervall_tage -> ohne_bestand
+--                 seit pruef_vorlauf_tage Tagen (mindestens 1, höchstens max_intervall_tage)
+--                 -> ohne_bestand („Ist die Ware wieder da?“), seit_tagen ab ohne_bestand_seit
 -- Ohne Warengruppe gelten vorsichtshalber die Werte von „Sonstiges“ (7/3/30),
 -- damit ein Artikel nicht still aus der Liste fällt.
 create or replace function mhd.artikel_json(p_artikel mhd.artikel)
@@ -493,12 +494,12 @@ begin
     end if;
   elsif p_artikel.aktiv and not p_artikel.bestand and p_artikel.letzte_aktion_am is null then
     -- Angelegt, aber das MHD wurde nie gespeichert (z. B. vor „MHD speichern“ abgebrochen):
-    -- sofort auf die Liste, sonst stünde ungeprüfte Ware bis zu max_intervall_tage unbemerkt im Regal.
+    -- sofort auf die Liste, sonst stünde ungeprüfte Ware unbemerkt im Regal.
     v_abschnitt := 'ohne_bestand';
     v_versaeumt := 'mhd_fehlt';
     v_seit := v_heute - coalesce(p_artikel.ohne_bestand_seit, v_heute);
   elsif p_artikel.aktiv and not p_artikel.bestand and p_artikel.ohne_bestand_seit is not null
-        and p_artikel.ohne_bestand_seit + v_max < v_heute then
+        and p_artikel.ohne_bestand_seit + least(greatest(v_pruef, 1), v_max) <= v_heute then
     v_abschnitt := 'ohne_bestand';
     v_seit := v_heute - p_artikel.ohne_bestand_seit;
   end if;

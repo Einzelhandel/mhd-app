@@ -176,21 +176,22 @@ test('Demo-Daten: weiterhin alle fünf Abschnitte gefüllt, kein Artikel mit „
   assert.equal(Object.values(l.abschnitte).flat().filter((x) => x.versaeumt === 'mhd_fehlt').length, 0);
 });
 
-test('ohne Bestand: 30 Tage nichts, am 31. Tag ohne_bestand; "ohne_bestand" stellt die Frage neu; "ruht" entfernt; geprueft holt zurück', async () => {
+test('ohne Bestand: nach dem Prüf-Vorlauf (3 Tage) ohne_bestand; "ohne_bestand" stellt die Frage neu; "ruht" entfernt; geprueft holt zurück', async () => {
   const { tag, aktion, wo, zeile, neu, liste } = await umgebung();
   await tag('2026-11-14');
   const a = await neu('Skyr');
   await aktion(a, 'geprueft', '2026-11-20');
   await aktion(a, 'aussortiert');                                 // kein Bestand gemeldet, ohne_bestand_seit = 14.11.
   assert.deepEqual(await wo(a), [null, null]);
-  await tag('2026-12-14'); assert.deepEqual(await wo(a), [null, null]);
-  await tag('2026-12-15'); assert.deepEqual(await wo(a), ['ohne_bestand', null]);
-  assert.equal((await liste()).abschnitte.ohne_bestand[0].seit_tagen, 31);
+  await tag('2026-11-15'); assert.deepEqual(await wo(a), [null, null]);
+  await tag('2026-11-16'); assert.deepEqual(await wo(a), [null, null]);
+  await tag('2026-11-17'); assert.deepEqual(await wo(a), ['ohne_bestand', null]);
+  assert.equal((await liste()).abschnitte.ohne_bestand[0].seit_tagen, 3);
   assert.equal((await liste()).abschnitte.ohne_bestand[0].versaeumt, null);
-  await aktion(a, 'ohne_bestand');
+  await aktion(a, 'ohne_bestand');                                // „weiter ohne Bestand“ ab 17.11.
   assert.deepEqual(await wo(a), [null, null]);
-  await tag('2027-01-14'); assert.deepEqual(await wo(a), [null, null]);
-  await tag('2027-01-15'); assert.deepEqual(await wo(a), ['ohne_bestand', null]);
+  await tag('2026-11-19'); assert.deepEqual(await wo(a), [null, null]);
+  await tag('2026-11-20'); assert.deepEqual(await wo(a), ['ohne_bestand', null]);
   const r = await aktion(a, 'ruht');
   assert.equal(r.aktiv, false);
   assert.deepEqual(await wo(a), [null, null]);
@@ -201,6 +202,40 @@ test('ohne Bestand: 30 Tage nichts, am 31. Tag ohne_bestand; "ohne_bestand" stel
   assert.equal((await zeile(a)).ohne_bestand_seit, null);
   assert.deepEqual(await wo(a), [null, null]);                    // Termin 17.06.
   await tag('2027-06-17'); assert.deepEqual(await wo(a), ['pruefen', null]);
+});
+
+// Warengruppe mit frei gewählten Vorlauf-Werten (direkt in der Tabelle), Artikel ohne Bestand seit dem 14.11.
+async function ohneBestandMitGruppe(pruef, reduzier, max) {
+  const u = await umgebung();
+  await u.tag('2026-11-14');
+  await u.db.query(
+    'insert into mhd.warengruppen (markt_id, name, pruef_vorlauf_tage, reduzier_vorlauf_tage, max_intervall_tage) values ($1, $2, $3, $4, $5)',
+    [u.m.marktId, 'Testgruppe', pruef, reduzier, max]);
+  const a = await u.neu('Testartikel', { gruppeName: 'Molkerei' });
+  const g = (await u.db.query("select id from mhd.warengruppen where markt_id = $1 and name = 'Testgruppe'", [u.m.marktId])).rows[0].id;
+  await u.db.query('update mhd.artikel set warengruppe_id = $1 where id = $2', [g, a]);
+  await u.aktion(a, 'geprueft', '2026-11-20');
+  await u.aktion(a, 'aussortiert');
+  return { ...u, a };
+}
+
+test('ohne Bestand: Prüf-Vorlauf 0 -> Nachfrage nach einem Tag', async () => {
+  const { tag, wo, a } = await ohneBestandMitGruppe(0, 0, 30);
+  assert.deepEqual(await wo(a), [null, null]);
+  await tag('2026-11-15'); assert.deepEqual(await wo(a), ['ohne_bestand', null]);
+});
+
+test('ohne Bestand: Prüf-Vorlauf 30, Höchstabstand 14 -> Nachfrage nach 14 Tagen', async () => {
+  const { tag, wo, a } = await ohneBestandMitGruppe(30, 3, 14);
+  await tag('2026-11-27'); assert.deepEqual(await wo(a), [null, null]);
+  await tag('2026-11-28'); assert.deepEqual(await wo(a), ['ohne_bestand', null]);
+});
+
+test('ohne Bestand: ohne Warengruppe gelten 7/3/30 -> Nachfrage nach 7 Tagen', async () => {
+  const { tag, wo, a, db } = await ohneBestandMitGruppe(3, 2, 30);
+  await db.query('update mhd.artikel set warengruppe_id = null where id = $1', [a]);
+  await tag('2026-11-20'); assert.deepEqual(await wo(a), [null, null]);
+  await tag('2026-11-21'); assert.deepEqual(await wo(a), ['ohne_bestand', null]);
 });
 
 test('"ruht" nur ohne Bestand: abgelaufener Artikel mit Bestand bleibt auf der Liste', async () => {
