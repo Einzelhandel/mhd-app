@@ -2,7 +2,8 @@
 // oder – nur Marktleitung – ein Artikel ohne Strichcode (Waagenware).
 // daten: { ean | null, vorschlag: { name, marke, menge } | null, quelle: 'off' | 'hand', zurueck? }
 // Dasselbe Formular ändert einen vorhandenen Artikel (nur Marktleitung): daten = { artikel, artikelZurueck? },
-// wobei `artikelZurueck` der Zurück-Eintrag der Artikel-Ansicht ist, von der aus bearbeitet wird.
+// wobei `artikelZurueck` der Zurück-Eintrag der Artikel-Ansicht ist, von der aus bearbeitet wird,
+// und `artikelVonScan` ihr Merker „gescannt“ (nach einer Aktion geht es dann zurück zum Scanner).
 import { ansichten, wechsle, mhdRpc } from './app.js';
 import { element, meldung, mitSperre, fehlertext, ausweg } from './hilfe.js';
 
@@ -14,7 +15,7 @@ ansichten['artikel-neu'] = async (wurzel, daten) => {
   const vorschlag = bearbeiten ?? daten.vorschlag ?? null;
   // Zurück: dorthin, woher man kam; nach einem Scan wieder zur Kamera; beim Bearbeiten zum Artikel.
   const zurueck = () => {
-    if (bearbeiten) return wechsle('artikel', { artikel: bearbeiten, zurueck: daten.artikelZurueck });
+    if (bearbeiten) return wechsle('artikel', { artikel: bearbeiten, zurueck: daten.artikelZurueck, vonScan: daten.artikelVonScan });
     const z = daten.zurueck ?? { ansicht: daten.ean ? 'scan' : 'liste' };
     wechsle(z.ansicht, z.daten);
   };
@@ -57,7 +58,7 @@ ansichten['artikel-neu'] = async (wurzel, daten) => {
   async function vorhandenenOeffnen() {
     const artikel = daten.ean ? await mhdRpc('mhd_artikel_suchen', { p_ean: daten.ean }) : null;
     if (!artikel) return false;
-    wechsle('artikel', { artikel, fokus: 'mhd' });
+    wechsle('artikel', { artikel, fokus: 'mhd', vonScan: true });
     return true;
   }
 
@@ -94,11 +95,11 @@ ansichten['artikel-neu'] = async (wurzel, daten) => {
         throw fehler;
       }
       if (bearbeiten) {
-        wechsle('artikel', { artikel, zurueck: daten.artikelZurueck });
+        wechsle('artikel', { artikel, zurueck: daten.artikelZurueck, vonScan: daten.artikelVonScan });
         meldung('Gespeichert.', 'ok');
         return;
       }
-      wechsle('artikel', { artikel, fokus: 'mhd', neu: true });
+      wechsle('artikel', { artikel, fokus: 'mhd', neu: true, vonScan: Boolean(daten.ean) });
       meldung('Artikel angelegt. Jetzt das vorderste MHD eingeben.', 'ok');
     });
   }

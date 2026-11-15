@@ -137,3 +137,16 @@ test('Liste → Einstellungen → Protokoll → zurück = Einstellungen → zur�
   assert.equal(r.aktion, 'zurueck');
   assert.equal(r.schritte, 2);
 });
+
+test('Rundgang: Liste → Scan → Artikel → Aktion → Scan ersetzt den erledigten Artikel; Zurück führt zur Liste', () => {
+  const { stapel, arten } = gehe(neuerStapel(),
+    ['liste'], ['scan'], ['artikel', { artikel: { id: 1 }, vonScan: true }], ['scan', { eben: '4000000000006', ersetzen: true }]);
+  assert.deepEqual(arten, ['ersetzen', 'anlegen', 'ersetzen', 'ersetzen']);
+  assert.deepEqual(stapel.eintraege.map((e) => e.ansicht), ['liste', 'scan']);
+  // Der Verlauf wächst auch nach vielen Artikeln nicht.
+  const weiter = gehe(stapel,
+    ['artikel', { artikel: { id: 2 }, vonScan: true }], ['scan', { eben: '4000000000013', ersetzen: true }],
+    ['artikel-neu', { ean: '4000000000020' }], ['artikel', { artikel: { id: 3 }, vonScan: true }], ['scan', { eben: '4000000000020', ersetzen: true }]);
+  assert.deepEqual(weiter.stapel.eintraege.map((e) => e.ansicht), ['liste', 'scan']);
+  assert.equal(zurueckZu(weiter.stapel, 0, MIT_PIN).eintrag.ansicht, 'liste');
+});

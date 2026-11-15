@@ -61,6 +61,12 @@ Einräumen (Teil 6).
 4. Die App zeigt den Artikel. Tippen Sie in das Feld „Vorderstes MHD“ und geben
    Sie das MHD der Ware ein, die ganz vorn steht.
 5. Tippen Sie auf „Geprüft“.
+6. Die App springt zurück zum Scanner. Sie können gleich den nächsten Artikel
+   scannen. Sind Sie fertig, tippen Sie auf „Zurück“; dann sehen Sie die Liste.
+
+Den Artikel, den Sie eben bearbeitet haben, öffnet die Kamera nicht sofort noch
+einmal, auch wenn er noch davor liegt. Brauchen Sie ihn doch noch einmal, tippen
+Sie seine Nummer ein.
 
 **MHD eingeben:** Es genügen Ziffern. Für den 20.11. tippen Sie `2011`, das Jahr
 ergänzt die App. Für den 20.11.26 tippen Sie `201126`. Sie können auch
@@ -120,8 +126,9 @@ Bei einem Artikel mit Ware im Regal gibt es drei Knöpfe:
   ein und tippen auf „Mit neuem MHD“. Ist nichts mehr da, tippen Sie auf
   „Kein Bestand“.
 
-Danach kehren Sie von selbst zur Liste zurück. Ein kurzer Hinweis (z. B.
-„Geprüft.“) bestätigt, dass es geklappt hat.
+Danach kehren Sie von selbst zur Liste zurück. Haben Sie den Artikel gescannt,
+kehren Sie stattdessen zum Scanner zurück. Ein kurzer Hinweis (z. B. „Geprüft.“)
+bestätigt, dass es geklappt hat.
 
 Bei einem Artikel **ohne Bestand** sind die Knöpfe andere:
 

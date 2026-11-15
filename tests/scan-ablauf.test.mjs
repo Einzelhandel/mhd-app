@@ -1,7 +1,7 @@
 // Was nach einem Scan (oder eingetippter Nummer) geschieht: reine Entscheidung ohne Kamera und DOM.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nachScan, leserWahl, mitErsatz } from '../docs/scan.js';
+import { nachScan, leserWahl, mitErsatz, gleicherCode } from '../docs/scan.js';
 
 const BEKANNT = { id: 7, name: 'Vollmilch', ean: '4000000000006' };
 
@@ -17,7 +17,7 @@ function dienste({ artikel = null, vorschlag = null } = {}) {
 test('bekannter Artikel: Ansicht Artikel, Open Food Facts wird nicht gefragt', async () => {
   const d = dienste({ artikel: BEKANNT });
   const r = await nachScan('4000000000006', d.dienste);
-  assert.deepEqual(r, { ziel: 'artikel', daten: { artikel: BEKANNT } });
+  assert.deepEqual(r, { ziel: 'artikel', daten: { artikel: BEKANNT, vonScan: true } });
   assert.deepEqual(d.rpc, [['mhd_artikel_suchen', { p_ean: '4000000000006' }]]);
   assert.equal(d.off.length, 0);
 });
@@ -104,4 +104,12 @@ test('mitErsatz: lässt sich der Ersatz nicht laden, scheitert der Leser mit LES
   const lies = mitErsatz(async () => { throw new Error('detect'); }, async () => { throw new Error('ZXING'); });
   for (let i = 0; i < 4; i++) assert.equal(await lies('x'), null);
   await assert.rejects(lies('x'), { message: 'LESER_FEHLT' });
+});
+
+test('gleicherCode: der eben bearbeitete Artikel wird von der Kamera nicht gleich wieder geöffnet', () => {
+  assert.equal(gleicherCode('4000000000006', '4000000000006'), true);
+  assert.equal(gleicherCode('036000291452', '0036000291452'), true);   // UPC-A im Bild, EAN-13 gespeichert
+  assert.equal(gleicherCode('4000000000013', '4000000000006'), false);
+  assert.equal(gleicherCode('4000000000006', null), false);            // kein Artikel eben bearbeitet
+  assert.equal(gleicherCode('4000000000006', undefined), false);
 });

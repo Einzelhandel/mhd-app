@@ -24,9 +24,15 @@ export async function nachScan(text, { rpc, off }) {
   if (!ean) return { ziel: 'fehler', meldung: NICHT_LESBAR };
   if (istWaagencode(ean)) return { ziel: 'suche', daten: { ohneEan: true }, meldung: WAAGE };
   const artikel = await rpc('mhd_artikel_suchen', { p_ean: ean });
-  if (artikel) return { ziel: 'artikel', daten: { artikel } };
+  if (artikel) return { ziel: 'artikel', daten: { artikel, vonScan: true } };
   const vorschlag = (await off(ean)) ?? null;
   return { ziel: 'artikel-neu', daten: { ean, vorschlag, quelle: vorschlag ? 'off' : 'hand' } };
+}
+
+// Liest die Kamera denselben Strichcode wie beim eben bearbeiteten Artikel (`eben`, EAN aus der Datenbank)?
+// Nach einer Aktion kehrt die App zum Scanner zurück; die Ware liegt dann oft noch vor der Kamera.
+export function gleicherCode(text, eben) {
+  return Boolean(eben) && (text === eben || normalisiereEan(text) === eben);
 }
 
 // ---- Kamera ----
@@ -104,7 +110,9 @@ const KEINE_KAMERA = {
   leser: 'Scannen geht auf diesem Gerät nicht. Bitte die Nummer eintippen.',
 };
 
-ansichten.scan = (wurzel) => {
+// daten (optional): { eben } – Strichcode des Artikels, der gerade bearbeitet wurde (siehe gleicherCode).
+ansichten.scan = (wurzel, daten) => {
+  const eben = daten?.eben ?? null;
   let strom = null;
   let takt = null;
   let laeuft = false; // ein Ergebnis wird gerade verarbeitet: nicht weiter lesen
@@ -188,7 +196,7 @@ ansichten.scan = (wurzel) => {
       beschaeftigt = true;
       try {
         const text = await lies(video);
-        if (text && text !== letzter && !laeuft) {
+        if (text && text !== letzter && !gleicherCode(text, eben) && !laeuft) {
           letzter = text;
           verarbeite(text);
         }

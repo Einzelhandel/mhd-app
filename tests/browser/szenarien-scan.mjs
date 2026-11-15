@@ -69,17 +69,29 @@ export default [
       await h.passtInsFenster('Neuer Artikel nach dem Anlegen');
       await h.mhdEintippen(tag(10));
       await h.knopf('MHD speichern', '.ansicht-artikel');
-      await h.warteListe();
-      h.gleich(await h.hinweis(), 'MHD gespeichert.', 'Bestätigung');
+      // Rundgang: Wer vom Scanner kam, landet nach der Aktion wieder im Scanner, mit der Bestätigung.
+      await h.warteAnsicht('scan');
+      h.gleich(await h.hinweis(), 'MHD gespeichert.', 'Bestätigung, zurück im Scanner');
       a = await h.artikel('Testbrot');
       h.gleich([a.mhd, a.bestand], [tag(10), true], 'DB: MHD gespeichert, Bestand');
       h.gleich((await h.protokoll('Testbrot')).map((p) => [p.art, p.mhd_neu, p.mitarbeiter]), [['geprueft', tag(10), 'Anna']], 'DB: Protokollzeile');
-      // Zurück führt nicht ins Formular oder zum fertigen Artikel (die Liste ist die erste Stelle des Verlaufs).
+      await h.foto('weiter-scannen');
+      // Gleich der nächste Artikel: bekannte Nummer, „Geprüft“, wieder Scanner.
+      await c.tippe('#ean', '4311501646854', { enter: true });
+      await h.warteAnsicht('artikel');
+      await h.ruhe();
+      h.gleich(await h.text('.ansicht-artikel h1'), 'Kefir', 'nächster Artikel aus dem Scanner');
+      await h.mhdEintippen(tag(8));
+      await h.knopf('Geprüft', '.ansicht-artikel');
+      await h.warteAnsicht('scan');
+      h.gleich(await h.hinweis(), 'Geprüft.', 'Bestätigung nach dem zweiten Artikel');
+      h.gleich((await h.artikel('Kefir')).mhd, tag(8), 'DB: MHD des zweiten Artikels gespeichert');
+      // Zurück führt vom Scanner zur Liste, nicht in erledigte Artikel oder ins Formular; der Verlauf wächst nicht.
+      h.pruefe(await c.zurueck(), 'Zurück-Schritt möglich');
+      await h.warteListe();
+      h.gleich(await h.anzahl('.ansicht-artikel, .ansicht-artikel-neu, .ansicht-scan'), 0, 'Zurück führt zur Liste');
       const v = await h.c.verlauf();
       h.pruefe(!/^http:\/\/127\.0\.0\.1:\d+\/$/.test(v.entries[v.currentIndex - 1]?.url ?? ''), 'vor der Liste liegt kein weiterer App-Eintrag');
-      h.pruefe(await c.zurueck(), 'Zurück-Schritt möglich');
-      await c.pause(300);
-      h.gleich(await h.anzahl('.ansicht-artikel, .ansicht-artikel-neu'), 0, 'Zurück führt nicht in Artikel oder Formular');
 
       // Angelegt, aber ohne MHD zurück (Abbruch vor „MHD speichern“): Der Artikel steht sofort auf der Liste.
       await c.navigiere(`${h.s.url}/`);

@@ -19,6 +19,8 @@ export const neuerStapel = () => ({ eintraege: [], position: -1 });
 //   vorher   (nur bei 'anlegen', sonst fehlt es) der Eintrag darunter, dessen Daten nachgetragen wurden
 //            (z. B. der Suchtext), samt Stelle `nr`; er ist per replaceState zu aktualisieren
 // `daten.zurueck` ({ ansicht, daten }) sagt, in welchem Zustand die Ansicht darunter wieder erscheinen soll.
+// `daten.ersetzen` (true): die neue Ansicht tritt an die Stelle der aktuellen, weil diese erledigt ist
+// (nach einer Aktion am gescannten Artikel zurück zum Scanner).
 export function vor(stapel, ansicht, daten) {
   const basis = stapel.eintraege.slice(0, stapel.position + 1);
   const oben = basis.at(-1);
@@ -42,7 +44,7 @@ export function vor(stapel, ansicht, daten) {
 
   const eintrag = { ansicht, daten };
   const ersetzen = !oben || OHNE_EINTRAG.has(ansicht) || OHNE_EINTRAG.has(oben.ansicht)
-    || DURCHGANG.has(oben.ansicht) || oben.ansicht === ansicht;
+    || DURCHGANG.has(oben.ansicht) || oben.ansicht === ansicht || daten?.ersetzen === true;
   if (ersetzen) {
     const eintraege = [...basis.slice(0, -1), eintrag];
     return { stapel: { eintraege, position: eintraege.length - 1 }, aktion: 'ersetzen', eintrag, zeige: eintrag };

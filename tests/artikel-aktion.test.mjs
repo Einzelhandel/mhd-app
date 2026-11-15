@@ -1,7 +1,7 @@
 // Welche Aufrufe gehören zu „Geprüft“ und „Reduziert“, je nach Eingabe im MHD-Feld (reine Logik).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { schritte, panelArt, DATUM_FEHLER } from '../docs/artikel-aktion.js';
+import { schritte, panelArt, nachAktion, DATUM_FEHLER } from '../docs/artikel-aktion.js';
 
 const HEUTE = '2026-11-14';
 const artikel = { id: 1, bestand: true, mhd: '2026-11-20' };
@@ -55,4 +55,12 @@ test('panelArt: MHD noch nie gespeichert („mhd_fehlt“) ist „neu“, auch o
   assert.equal(panelArt({ bestand: false, aktiv: true, versaeumt: null }), 'ohne_bestand');
   assert.equal(panelArt({ bestand: false, aktiv: false, versaeumt: 'mhd_fehlt' }), 'ohne_bestand');
   assert.equal(panelArt({ bestand: true, aktiv: true, versaeumt: 'abgelaufen' }), 'bestand');
+});
+
+test('nachAktion: wer vom Scanner kam, scannt weiter; sonst zurück zur Liste', () => {
+  assert.deepEqual(nachAktion({ artikel: { id: 1 }, vonScan: true }, { id: 1, ean: '4000000000006' }),
+    { ansicht: 'scan', daten: { eben: '4000000000006', ersetzen: true } });
+  assert.deepEqual(nachAktion({ artikel: { id: 1 } }, { id: 1, ean: '4000000000006' }), { ansicht: 'liste' });
+  assert.deepEqual(nachAktion({ artikel: { id: 1 }, zurueck: { ansicht: 'suche' } }, { id: 1, ean: null }), { ansicht: 'liste' });
+  assert.deepEqual(nachAktion(undefined, { id: 1 }), { ansicht: 'liste' });
 });

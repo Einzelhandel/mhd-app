@@ -23,3 +23,12 @@ export function panelArt(artikel, neu = false) {
   if (!artikel.bestand && artikel.aktiv !== false && (neu || artikel.versaeumt === 'mhd_fehlt')) return 'neu';
   return artikel.aktiv === false || !artikel.bestand ? 'ohne_bestand' : 'bestand';
 }
+
+// Wohin nach einer gelungenen Aktion: Wer vom Scanner kam (`vonScan` in den Daten der Artikel-Ansicht), scannt
+// gleich weiter (Rundgang durch den Markt, Ware einräumen); sonst geht es zur Liste. `eben` sagt dem Scanner,
+// welchen Strichcode die Kamera nicht sofort noch einmal öffnen soll; `ersetzen`: der erledigte Artikel
+// bleibt nicht im Verlauf der Zurück-Taste.
+export function nachAktion(daten, artikel) {
+  if (!daten?.vonScan) return { ansicht: 'liste' };
+  return { ansicht: 'scan', daten: { eben: artikel.ean ?? null, ersetzen: true } };
+}

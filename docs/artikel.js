@@ -2,7 +2,7 @@
 import { ansichten, wechsle, mhdRpc, serverHeute, ich } from './app.js';
 import { element, meldung, mitSperre, fehlertext, ausweg } from './hilfe.js';
 import { leseDatum, zeigeDatum } from './datum.js';
-import { schritte, panelArt, DATUM_FEHLER } from './artikel-aktion.js';
+import { schritte, panelArt, nachAktion, DATUM_FEHLER } from './artikel-aktion.js';
 import { statusText } from './liste.js';
 
 const HINWEISE = {
@@ -29,7 +29,7 @@ ansichten.artikel = async (wurzel, daten) => {
   const bereich = element('div', { class: 'bereich' });
 
   // Sendet die Aufrufe nacheinander (schlägt einer fehl, bleiben die folgenden ungesendet)
-  // und kehrt mit kurzer Bestätigung zur Liste zurück.
+  // und kehrt mit kurzer Bestätigung zur Liste zurück – oder zum Scanner, wenn der Artikel gescannt wurde.
   function ausfuehren(aufrufe, hinweis) {
     return mitSperre(wurzel, async () => {
       for (const { art, mhd } of aufrufe) {
@@ -37,7 +37,8 @@ ansichten.artikel = async (wurzel, daten) => {
         if (mhd) parameter.p_mhd = mhd;
         await mhdRpc('mhd_aktion', parameter);
       }
-      wechsle('liste');
+      const ziel = nachAktion(daten, a);
+      wechsle(ziel.ansicht, ziel.daten);
       meldung(hinweis, 'ok');
     });
   }
@@ -170,7 +171,7 @@ ansichten.artikel = async (wurzel, daten) => {
       element('h1', {}, a.name, a.aktiv === false && element('span', { class: 'marke-ruht' }, 'ruht'))),
     ich()?.rolle === 'leitung' && element('button', {
       type: 'button', class: 'knopf klein',
-      onclick: () => wechsle('artikel-neu', { artikel: a, artikelZurueck: daten.zurueck }),
+      onclick: () => wechsle('artikel-neu', { artikel: a, artikelZurueck: daten.zurueck, artikelVonScan: daten.vonScan }),
     }, 'Bearbeiten'),
     element('dl', { class: 'angaben' }, angaben.map(([name, wert]) => [element('dt', {}, name), element('dd', {}, wert)])),
     status && element('p', { class: `status-gross abschnitt-${a.abschnitt}` }, status),
