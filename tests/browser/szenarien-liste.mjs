@@ -84,6 +84,18 @@ export default [
       h.gleich([a.reduziert, a.bestand, a.mhd], [true, true, tag(2)], 'DB: reduziert = true, MHD unverändert');
       h.gleich((await h.protokoll('Skyr')).at(-1), { art: 'reduziert', mhd_alt: tag(2), mhd_neu: tag(2), mitarbeiter: 'Anna' }, 'DB: Protokollzeile');
       h.gleich(await h.istListe(), await h.sollListe(), 'Liste entspricht der Datenbank');
+      // Am MHD-Tag bleibt der Artikel nach „Reduziert“ stehen; die Zeile zeigt dann „reduziert“.
+      const marke = (name) => c.werte((n) => [...document.querySelectorAll('section.abschnitt-laeuft_ab button.zeile')]
+        .find((z) => z.querySelector('.name').firstChild.textContent.trim() === n)?.querySelector('.marke-reduziert')?.textContent ?? null, name);
+      h.gleich(await marke(BUTTER), null, 'Butter unter „Läuft heute ab“: vorher ohne Vermerk');
+      await h.oeffneAusListe('laeuft_ab', BUTTER);
+      await h.knopf('Reduziert', '.ansicht-artikel');
+      await h.warteListe();
+      h.gleich(await h.hinweis(), 'Als reduziert vermerkt.', 'Butter: Erfolg');
+      h.pruefe((await h.namenIn('laeuft_ab')).includes(BUTTER), 'Butter bleibt unter „Läuft heute ab“');
+      h.gleich(await marke(BUTTER), 'reduziert', 'Zeile zeigt den Vermerk „reduziert“');
+      await h.passtInsFenster('Liste mit Vermerk');
+      await h.foto('liste-reduziert');
       // Der Artikel zeigt danach „Bereits reduziert.“
       await c.klick({ text: 'Suche', in: '.ansicht-liste', sel: 'button', genau: true });
       await h.warteAnsicht('suche');

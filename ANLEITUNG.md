@@ -112,6 +112,9 @@ Bei einem Artikel mit Ware im Regal gibt es drei Knöpfe:
   danach unter „Heute reduzieren“.
 - **„Reduziert“:** Die Ware ist im Preis herabgesetzt. Das MHD im Feld bleibt, wie
   es ist. Wollen Sie auch das MHD ändern, tippen Sie es vorher ein.
+  Steht der Artikel danach noch auf der Liste (zum Beispiel am Tag des MHD unter
+  „Läuft heute ab“), zeigt ein gelber Vermerk „reduziert“ neben dem Namen, dass
+  das Reduzieren erledigt ist.
 - **„Aussortiert“:** Ware wurde aus dem Regal genommen. Die App fragt „Ware
   aussortiert. Was steht jetzt vorn?“. Steht noch Ware im Regal, geben Sie ihr MHD
   ein und tippen auf „Mit neuem MHD“. Ist nichts mehr da, tippen Sie auf

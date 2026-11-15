@@ -36,7 +36,10 @@ export function statusText(artikel, heute) {
 export function artikelZeile(artikel, heute, beimOeffnen) {
   const status = statusText(artikel, heute);
   return element('button', { type: 'button', class: `zeile abschnitt-${artikel.abschnitt ?? 'keiner'}`, onclick: () => beimOeffnen(artikel) },
-    element('span', { class: 'name' }, artikel.name, artikel.aktiv === false && element('span', { class: 'marke-ruht' }, 'ruht')),
+    element('span', { class: 'name' }, artikel.name,
+      artikel.aktiv === false && element('span', { class: 'marke-ruht' }, 'ruht'),
+      // Vermerk, damit ein reduzierter Artikel, der weiter auf der Liste steht (z. B. am MHD-Tag), nicht wie unerledigt aussieht.
+      artikel.reduziert && artikel.bestand && element('span', { class: 'marke-reduziert' }, 'reduziert')),
     element('span', { class: 'einzelheit' }, [artikel.menge, artikel.platz].filter(Boolean).join(' · ')),
     element('span', { class: 'einzelheit' },
       artikel.mhd ? `MHD ${zeigeDatum(artikel.mhd)}` : 'kein MHD',
