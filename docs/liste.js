@@ -57,7 +57,9 @@ function zeigeAbschnitte(inhalt, daten) {
   inhalt.replaceChildren(...teile);
 }
 
-let aktiv = null; // { wurzel, laden, geraetTag } der gerade angezeigten Liste; geraetTag: Tag des Geräts beim letzten Laden
+// { wurzel, laden, geraetTag, ladend } der gerade angezeigten Liste; geraetTag: Tag des Geräts beim Beginn des
+// letzten erfolgreichen Ladens; ladend: Nummer des Laufs, der gerade lädt (0: keiner)
+let aktiv = null;
 
 // Wird die Seite wieder sichtbar (Handy aus der Tasche, Wechsel der App), neu laden.
 document.addEventListener('visibilitychange', () => {
@@ -65,9 +67,10 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // Bleibt der Bildschirm an, bemerkt die Liste den neuen Tag selbst: einmal pro Minute ein Blick auf die Uhr des
-// Geräts, ohne Serveraufruf (jeder Aufruf verlängert die PIN-Sitzung); nach Mitternacht genau einmal neu laden.
+// Geräts, ohne Serveraufruf (jeder Aufruf verlängert die PIN-Sitzung); nach Mitternacht neu laden. Scheitert das
+// Laden, bleibt der alte Tag gemerkt und der nächste Takt versucht es erneut. Läuft schon ein Laden, kommt keins dazu.
 setInterval(() => {
-  if (!document.hidden && aktiv?.wurzel.isConnected && neuerTag(aktiv.geraetTag, geraeteTag())) aktiv.laden();
+  if (!document.hidden && aktiv?.wurzel.isConnected && !aktiv.ladend && neuerTag(aktiv.geraetTag, geraeteTag())) aktiv.laden();
 }, 60_000);
 
 ansichten.liste = (wurzel) => {
@@ -77,10 +80,12 @@ ansichten.liste = (wurzel) => {
 
   async function laden() {
     const mein = ++lauf;
-    eintrag.geraetTag = geraeteTag();
+    eintrag.ladend = mein;
+    const tagBeiBeginn = geraeteTag(); // vor dem Aufruf lesen: Ein Laden kurz vor Mitternacht muss danach noch einmal laufen
     try {
       const daten = await mhdRpc('mhd_liste');
       if (mein !== lauf || !wurzel.isConnected) return;
+      eintrag.geraetTag = tagBeiBeginn;
       stand.heute = daten.heute;
       titel.textContent = ueberschriftHeute(daten.heute);
       meldung('');
@@ -91,6 +96,8 @@ ansichten.liste = (wurzel) => {
       if (!inhalt.querySelector('.abschnitt')) {
         inhalt.replaceChildren(ausweg(laden));
       }
+    } finally {
+      if (eintrag.ladend === mein) eintrag.ladend = 0; // ein neuerer Lauf behält seine Nummer
     }
   }
 
@@ -107,7 +114,7 @@ ansichten.liste = (wurzel) => {
     gibtAnsicht('suche') && element('button', { type: 'button', class: 'knopf haupt', onclick: () => wechsle('suche') }, 'Suche'));
 
   wurzel.append(kopf, installBereich(), inhalt, leiste);
-  const eintrag = { wurzel, laden, geraetTag: null };
+  const eintrag = { wurzel, laden, geraetTag: null, ladend: 0 };
   aktiv = eintrag;
   return laden();
 };

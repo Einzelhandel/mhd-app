@@ -21,6 +21,9 @@ export const eingabe = (isoDatum) => `${isoDatum.slice(8, 10)}.${isoDatum.slice(
 export const NETZ_ZAEHLER = `(() => {
   window.__offen = 0; const f = window.fetch.bind(window);
   window.fetch = (...a) => { window.__offen++; return f(...a).finally(() => { window.__offen--; }); };
+  // Merkt sich die Minutentakte der App, damit ein Szenario den Takt von Hand auslösen kann (ohne 60 Sekunden zu warten).
+  window.__takte = []; const si = window.setInterval.bind(window);
+  window.setInterval = (fn, ms, ...r) => { if (ms === 60000) window.__takte.push(fn); return si(fn, ms, ...r); };
 })();`;
 
 export function baueRahmen({ s, c }) {

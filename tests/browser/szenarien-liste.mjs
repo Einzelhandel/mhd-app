@@ -208,4 +208,60 @@ export default [
       h.gleich(await h.text('.ansicht-suche .inhalt'), 'Kefir500 g · Kühlregal 1MHD 15.11.26abgelaufen seit 1 Tag', 'nur die Trefferzeile, sonst nichts');
     },
   },
+  {
+    nr: 23,
+    name: 'Über Nacht: scheitert das Neuladen, versucht es der Minutentakt erneut',
+    async lauf(h) {
+      const { c } = h;
+      await h.alsMitarbeiter('Anna');
+      h.gleich(await h.text('.ansicht-liste h1'), 'Heute, Mo 16.11.', 'Überschrift vor dem Tageswechsel');
+      // Zählt die Listenaufrufe der Seite; "scheitern" lässt den nächsten Aufruf an die Liste ohne Antwort enden.
+      await c.werte(() => {
+        window.__listen = 0; window.__scheitern = 0;
+        const f = window.fetch;
+        window.fetch = (url, ...a) => {
+          if (String(url).includes('mhd_liste')) {
+            window.__listen++;
+            if (window.__scheitern > 0) { window.__scheitern--; return Promise.reject(new TypeError('Failed to fetch')); }
+          }
+          return f(url, ...a);
+        };
+      });
+      const takt = () => c.werte(() => window.__takte.forEach((fn) => fn()));
+      const listen = () => c.werte(() => window.__listen);
+
+      await takt();
+      await h.ruhe();
+      h.gleich(await listen(), 0, 'ohne Tageswechsel löst der Takt keinen Aufruf aus');
+
+      await h.setzeHeute(tag(1));
+      // Die Uhr des Geräts geht über Mitternacht (gilt nur für new Date() ohne Zeitangabe).
+      await c.werte(() => {
+        const Echt = window.Date; window.__echtesDatum = Echt;
+        window.Date = class extends Echt { constructor(...a) { super(...(a.length ? a : [Echt.now() + 86400000])); } };
+      });
+      try {
+        await c.werte(() => { window.__scheitern = 1; });
+        await takt();
+        await c.warteAuf(() => document.getElementById('meldung').textContent !== '', { text: 'Fehlermeldung' });
+        await h.ruhe();
+        h.gleich(await listen(), 1, 'erster Versuch nach Mitternacht');
+        h.gleich(await h.text('.ansicht-liste h1'), 'Heute, Mo 16.11.', 'Überschrift unverändert, solange das Laden scheitert');
+        h.pruefe((await h.alleNamen()).length > 0, 'die alte Liste bleibt stehen');
+
+        await takt();
+        await c.warteAuf(() => document.querySelector('.ansicht-liste h1').textContent === 'Heute, Di 17.11.', { text: 'neue Überschrift' });
+        await h.ruhe();
+        h.gleich(await listen(), 2, 'der nächste Takt lädt erneut');
+        h.gleich(await h.meldung(), '', 'Fehlermeldung ist weg');
+        h.gleich(await h.istListe(), await h.sollListe(), 'Liste entspricht der Datenbank am neuen Tag');
+
+        await takt();
+        await h.ruhe();
+        h.gleich(await listen(), 2, 'nach dem Erfolg lädt der Takt nicht mehr');
+      } finally {
+        await c.werte(() => { if (window.__echtesDatum) window.Date = window.__echtesDatum; });
+      }
+    },
+  },
 ];
