@@ -115,6 +115,8 @@ test('GET /off/api/v2/product/<EAN> liefert die Demo-Artikel als Open-Food-Facts
   assert.equal(ok.product.quantity, '500 g');
   const nein = await (await fetch(s.url + '/off/api/v2/product/4006381333931')).json();
   assert.equal(nein.status, 0);
+  const fremd = await (await fetch(s.url + '/off/api/v2/product/4000000000037')).json();   // nicht im Demo-Markt, mit Kategorien
+  assert.deepEqual([fremd.status, fremd.product.product_name, fremd.product.categories_tags[0]], [1, 'Testjoghurt mild', 'en:dairies']);
 });
 
 test('Test-Steuerung: /test/heute und /test/jetzt setzen die Einstellungen und lassen sich aufheben', async () => {

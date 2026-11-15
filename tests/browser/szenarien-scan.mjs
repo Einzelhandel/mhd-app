@@ -150,6 +150,34 @@ export default [
     },
   },
   {
+    nr: 24,
+    name: 'Scannen: Vorschlag aus Open Food Facts mit Warengruppe',
+    async lauf(h) {
+      const { c } = h;
+      await h.alsMitarbeiter('Anna');
+      await h.knopf('Scannen', '.ansicht-liste');
+      await h.warteAnsicht('scan');
+      await c.tippe('#ean', '4000000000037', { enter: true });
+      await h.warteAnsicht('artikel-neu');
+      await c.warteAuf(() => document.getElementById('name'), { text: 'Formular Neuer Artikel' });
+      h.gleich(await c.werte(() => ['name', 'marke', 'menge'].map((id) => document.getElementById(id).value)), ['Testjoghurt mild', 'Testmarke', '150 g'], 'Name, Marke und Menge sind vorbelegt');
+      const gewaehlt = () => c.werte(() => { const s = document.getElementById('warengruppe'); return s.options[s.selectedIndex].textContent; });
+      h.gleich(await gewaehlt(), 'Molkerei', 'Warengruppe ist vorgeschlagen');
+      h.gleich(await h.text('#gruppe-vorschlag'), 'Vorgeschlagen: Molkerei. Bitte prüfen.', 'Hinweis am Feld Warengruppe');
+      await h.passtInsFenster('Neuer Artikel mit Vorschlag');
+      await h.foto('vorschlag');
+      // Wer die Gruppe selbst wählt, sieht den Hinweis nicht mehr.
+      await h.waehleOption('#warengruppe', 'Feinkost und Salate');
+      h.gleich(await c.werte(() => document.getElementById('gruppe-vorschlag').hidden), true, 'Hinweis verschwindet nach eigener Wahl');
+      await h.waehleOption('#warengruppe', 'Molkerei');
+      await h.knopf('Speichern', '.ansicht-artikel-neu');
+      await h.warteAnsicht('artikel');
+      await h.ruhe();
+      const a = await h.artikel('Testjoghurt mild');
+      h.gleich([a.ean, a.quelle, a.gruppe], ['4000000000037', 'off', 'Molkerei'], 'DB: Artikel mit vorgeschlagener Warengruppe angelegt');
+    },
+  },
+  {
     nr: 6,
     name: 'Scannen: Waagen-Etikett führt zur Suche „ohne Strichcode“',
     async lauf(h) {

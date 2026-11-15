@@ -1,6 +1,7 @@
 // Ansicht „Neuer Artikel“: ein Strichcode, den der Markt noch nicht kennt (nach dem Scan),
 // oder – nur Marktleitung – ein Artikel ohne Strichcode (Waagenware).
-// daten: { ean | null, vorschlag: { name, marke, menge } | null, quelle: 'off' | 'hand', zurueck? }
+// daten: { ean | null, vorschlag: { name, marke, menge, gruppe } | null, quelle: 'off' | 'hand', zurueck? }
+// (`gruppe`: Name einer Warengruppe als Vorschlag aus den Kategorien von Open Food Facts, siehe off.js)
 // Dasselbe Formular ändert einen vorhandenen Artikel (nur Marktleitung): daten = { artikel, artikelZurueck? },
 // wobei `artikelZurueck` der Zurück-Eintrag der Artikel-Ansicht ist, von der aus bearbeitet wird,
 // und `artikelVonScan` ihr Merker „gescannt“ (nach einer Aktion geht es dann zurück zum Scanner).
@@ -41,9 +42,13 @@ ansichten['artikel-neu'] = async (wurzel, daten) => {
   const marke = feld('marke', 'Marke', vorschlag?.marke, { maxlength: MAX_TEXT });
   const menge = feld('menge', 'Menge', vorschlag?.menge, { maxlength: MAX_TEXT });
   const platz = feld('platz', 'Platz (z. B. Kühlregal 3)', bearbeiten?.platz, { maxlength: MAX_TEXT });
+  // Vorschlag für die Warengruppe: nur bei einem neuen Artikel und nur, wenn der Markt eine Gruppe dieses Namens hat.
+  const vorgeschlagen = bearbeiten ? null : gruppen.find((g) => g.name === daten.vorschlag?.gruppe) ?? null;
   const gruppe = element('select', { id: 'warengruppe', name: 'warengruppe', required: true, 'aria-required': 'true' },
     element('option', { value: '' }, 'Bitte wählen'),
-    gruppen.map((g) => element('option', { value: g.id, selected: g.id === bearbeiten?.warengruppe_id }, g.name)));
+    gruppen.map((g) => element('option', { value: g.id, selected: g.id === (bearbeiten?.warengruppe_id ?? vorgeschlagen?.id) }, g.name)));
+  const gruppeHinweis = vorgeschlagen && element('p', { id: 'gruppe-vorschlag', class: 'hinweis-text' }, `Vorgeschlagen: ${vorgeschlagen.name}. Bitte prüfen.`);
+  if (gruppeHinweis) gruppe.addEventListener('change', () => { gruppeHinweis.hidden = true; });
 
   const hinweis = !bearbeiten && vorschlag && element('p', { class: 'hinweis-text' }, 'Vorschlag aus Open Food Facts – bitte prüfen');
   const ean = bearbeiten ? bearbeiten.ean : daten.ean;
@@ -111,7 +116,7 @@ ansichten['artikel-neu'] = async (wurzel, daten) => {
     strichcode,
     element('form', { class: 'formular', novalidate: true, onsubmit: (e) => { e.preventDefault(); speichern(); } },
       name.zeile, marke.zeile, menge.zeile, platz.zeile,
-      element('div', { class: 'feld' }, element('label', { for: 'warengruppe' }, 'Warengruppe'), gruppe),
+      element('div', { class: 'feld' }, element('label', { for: 'warengruppe' }, 'Warengruppe'), gruppe, gruppeHinweis),
       element('button', { type: 'submit', class: 'knopf haupt' }, 'Speichern'))].filter(Boolean));
   name.eingabe.focus();
 };

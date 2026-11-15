@@ -139,8 +139,13 @@ export async function starteServer({ port = 0 } = {}) {
     return { status: 200, json: tokenPaar(z.rows[0].id) };
   }
 
-  // Open Food Facts: die Demo-Artikel mit Strichcode, sonst „nicht gefunden“.
+  // Open Food Facts: die Demo-Artikel mit Strichcode und ein Produkt, das der Demo-Markt nicht führt
+  // (für den Vorschlag bei einem unbekannten Strichcode, mit Kategorien); sonst „nicht gefunden“.
+  const OFF_FREMD = {
+    '4000000000037': { product_name: 'Testjoghurt mild', brands: 'Testmarke', quantity: '150 g', categories_tags: ['en:dairies', 'en:fermented-foods', 'en:yogurts'] },
+  };
   async function off(ean) {
+    if (OFF_FREMD[ean]) return { code: ean, status: 1, status_verbose: 'product found', product: OFF_FREMD[ean] };
     const z = await exklusiv(() => db.query(
       `select a.name, a.marke, a.menge from mhd.artikel a join mhd.maerkte m on m.id = a.markt_id
         where m.name = 'Demo-Markt' and a.ean = $1 and a.quelle = 'off'`, [ean]));

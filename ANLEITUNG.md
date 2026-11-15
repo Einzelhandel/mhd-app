@@ -153,7 +153,9 @@ Sie nur nachsehen, ob Sie die richtige Ware in der Hand haben, tippen Sie auf
    Food Facts – bitte prüfen“. Lesen Sie Name, Marke und Menge und verbessern Sie
    sie, wenn nötig. Hat die App nichts gefunden, tippen Sie den Namen selbst ein.
 2. Wählen Sie bei „Warengruppe“ die passende Gruppe. Davon hängt ab, wann der
-   Artikel geprüft wird.
+   Artikel geprüft wird. Oft hat die App schon eine Gruppe gewählt; darunter steht
+   dann zum Beispiel „Vorgeschlagen: Molkerei. Bitte prüfen.“ Der Vorschlag kann
+   falsch sein. Stimmt er nicht, wählen Sie die richtige Gruppe.
 3. Geben Sie, wenn Sie wollen, einen Platz an, zum Beispiel „Kühlregal 3“.
 4. Tippen Sie auf „Speichern“.
 5. Die App sagt „Artikel angelegt. Jetzt das vorderste MHD eingeben.“ Geben Sie das
