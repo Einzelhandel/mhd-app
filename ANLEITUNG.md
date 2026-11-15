@@ -147,8 +147,9 @@ Artikel“.
 
 Kommen Sie nicht mehr dazu (zum Beispiel weil das Netz weg war), steht der Artikel
 sofort auf der Liste unter „Ohne Bestand – wieder da?“ mit „MHD fehlt noch“. Wer
-ihn antippt, kann das MHD speichern. Wurde der Artikel versehentlich angelegt,
-tippt man stattdessen auf „Aus dem Sortiment nehmen“; dann verschwindet er von der Liste.
+ihn antippt, kann das MHD speichern. Haben Sie den Artikel versehentlich
+angelegt, tippen Sie stattdessen auf „Aus dem Sortiment nehmen“; dann verschwindet
+er von der Liste.
 
 ## 8. Abgewogene Ware und Ware ohne Strichcode
 

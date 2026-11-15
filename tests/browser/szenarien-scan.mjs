@@ -58,7 +58,7 @@ export default [
 
       // Ein neuer Artikel: Hinweis, „MHD speichern“ und „Aus dem Sortiment nehmen“, keine Knöpfe für „ohne Bestand“.
       h.gleich(await h.text('.ansicht-artikel .frage'), 'Neuer Artikel – bitte das vorderste MHD eingeben.', 'Hinweis zum neuen Artikel');
-      h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern', 'Aus dem Sortiment nehmen'], 'nur „MHD speichern“ und „Aus dem Sortiment nehmen“');
+      h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern', 'Aus dem Sortiment nehmen'], 'beide Knöpfe: „MHD speichern“ und „Aus dem Sortiment nehmen“');
       h.pruefe(!(await h.text('.ansicht-artikel')).includes('Wieder da'), 'kein „Wieder da“');
       await h.foto('neu-mhd');
       await h.passtInsFenster('Neuer Artikel nach dem Anlegen');

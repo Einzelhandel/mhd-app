@@ -217,12 +217,16 @@ export default [
       h.gleich(await h.text('.ansicht-liste h1'), 'Heute, Mo 16.11.', 'Überschrift vor dem Tageswechsel');
       // Zählt die Listenaufrufe der Seite; "scheitern" lässt den nächsten Aufruf an die Liste ohne Antwort enden.
       await c.werte(() => {
-        window.__listen = 0; window.__scheitern = 0;
+        window.__listen = 0; window.__scheitern = 0; window.__spaet = 0;
         const f = window.fetch;
         window.fetch = (url, ...a) => {
           if (String(url).includes('mhd_liste')) {
             window.__listen++;
             if (window.__scheitern > 0) { window.__scheitern--; return Promise.reject(new TypeError('Failed to fetch')); }
+          }
+          if (String(url).includes('mhd_liste') && window.__spaet > 0) { // Antwort kommt spät: das Laden ist unterwegs
+            const ms = window.__spaet; window.__spaet = 0;
+            return new Promise((ok) => setTimeout(ok, ms)).then(() => f(url, ...a));
           }
           return f(url, ...a);
         };
@@ -249,10 +253,14 @@ export default [
         h.gleich(await h.text('.ansicht-liste h1'), 'Heute, Mo 16.11.', 'Überschrift unverändert, solange das Laden scheitert');
         h.pruefe((await h.alleNamen()).length > 0, 'die alte Liste bleibt stehen');
 
+        // Der Server antwortet spät; zwei Takte kurz hintereinander starten nur ein Laden.
+        await c.werte(() => { window.__spaet = 1500; });
         await takt();
+        await takt();
+        h.gleich(await listen(), 2, 'der nächste Takt lädt erneut, der zweite Takt startet kein zweites Laden');
         await c.warteAuf(() => document.querySelector('.ansicht-liste h1').textContent === 'Heute, Di 17.11.', { text: 'neue Überschrift' });
         await h.ruhe();
-        h.gleich(await listen(), 2, 'der nächste Takt lädt erneut');
+        h.gleich(await listen(), 2, 'auch nach der späten Antwort bleibt es bei einem Aufruf');
         h.gleich(await h.meldung(), '', 'Fehlermeldung ist weg');
         h.gleich(await h.istListe(), await h.sollListe(), 'Liste entspricht der Datenbank am neuen Tag');
 

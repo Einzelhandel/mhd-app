@@ -43,7 +43,7 @@ test('Demo: gewählte Mitarbeiter-PIN gilt für Anna und Ben; Zurücksetzen ohne
 test('Demo: eine ungültige Mitarbeiter-PIN scheitert', async () => {
   const { db } = await demoDatenbank();
   await db.query("select mhd.demo_einrichten('demo@example.com', '9999')");
-  await assert.rejects(db.query("select mhd.demo_einrichten('demo@example.com', null, 'abc')"));
+  await assert.rejects(db.query("select mhd.demo_einrichten('demo@example.com', null, 'abc')"), /PIN_UNGUELTIG/);
 });
 
 test('Demo: Datei zweimal laden und über eine Datenbank mit der alten Funktion laden ergibt genau eine Funktion', async () => {

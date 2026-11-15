@@ -202,8 +202,10 @@ Außerdem:
   Die Leitungs-PIN und das Passwort des Demo-Kontos gehören nicht ins
   Repository, sondern werden direkt übergeben. Zurücksetzen der Demo (Artikel,
   Protokoll, Warengruppen, Sperren, PINs von Anna und Ben): derselbe Aufruf ohne
-  PIN, `select mhd.demo_einrichten('demo@example.com');`; die Leitungs-PIN bleibt
-  dann unverändert. Dies löscht nur die Daten des Demo-Markts.
+  Leitungs-PIN, `select mhd.demo_einrichten('demo@example.com');`; die Leitungs-PIN
+  bleibt dann unverändert, die PIN von Anna und Ben fällt aber auf `1234` zurück,
+  wenn sie nicht erneut als dritter Parameter übergeben wird (siehe unten). Dies
+  löscht nur die Daten des Demo-Markts.
 
   Ohne weitere Angabe haben Anna und Ben die PIN `1234`. Für eine Demo im
   Internet eine eigene PIN als dritten Parameter mitgeben, und zwar bei
