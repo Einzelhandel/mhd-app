@@ -451,6 +451,8 @@ $$;
 --                 Reduzieren steht offen   -> reduzieren, an jedem Tag vor dem MHD, solange
 --                   nicht reduziert ist und die letzte Aktion am oder nach MHD - Reduzier-Vorlauf
 --                   lag (nicht bei versäumtem Termin und nicht am MHD-Tag)
+--                 MHD ist heute            -> laeuft_ab, auch nach einer Aktion von heute, bis
+--                   aussortiert ist oder ein anderes MHD gilt (ein versäumter Termin geht vor)
 --   ohne Bestand: noch nie eine Aktion (neu angelegt, MHD fehlt) -> sofort ohne_bestand
 --                 (versaeumt „mhd_fehlt“, seit_tagen ab ohne_bestand_seit)
 --                 seit pruef_vorlauf_tage Tagen (mindestens 1, höchstens max_intervall_tage)
@@ -502,6 +504,12 @@ begin
          and p_artikel.mhd > v_heute
          and p_artikel.mhd - v_reduzier <= coalesce(p_artikel.letzte_aktion_am, v_heute - 1) then
         v_abschnitt := 'reduzieren';
+      end if;
+      -- Läuft heute ab steht offen: Nach einer Aktion am MHD-Tag kennt mhd.termin keinen
+      -- Termin mehr. Die Ware steht aber noch im Regal und muss heute raus; ohne diese Regel
+      -- stünde der Artikel erst am Folgetag wieder auf der Liste, dann rot als abgelaufen.
+      if v_abschnitt is null and p_artikel.mhd = v_heute then
+        v_abschnitt := 'laeuft_ab';
       end if;
     end if;
   elsif p_artikel.aktiv and not p_artikel.bestand and p_artikel.letzte_aktion_am is null then

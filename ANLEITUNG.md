@@ -88,7 +88,7 @@ Sie sehen das MHD und die Knöpfe.
 | Abschnitt | Farbe | Was es heißt | Was Sie tun |
 |---|---|---|---|
 | **Abgelaufen / versäumt** | rot | Das MHD ist vorbei, oder ein Termin wurde nicht erledigt (die App schreibt dazu, was versäumt wurde und seit wie vielen Tagen). | Sofort ins Regal schauen. Abgelaufene Ware raus, dann „Aussortiert“. War nur eine Prüfung oder das Reduzieren versäumt, holen Sie es jetzt nach. |
-| **Läuft heute ab** | orange | Die Ware hat heute ihr MHD. | Ware heute rausnehmen. Danach tippen Sie auf „Aussortiert“. |
+| **Läuft heute ab** | orange | Die Ware hat heute ihr MHD. | Ware heute rausnehmen. Danach tippen Sie auf „Aussortiert“. Der Artikel bleibt den ganzen Tag hier stehen, bis das jemand getan hat, auch wenn er heute erst gescannt, geprüft oder reduziert wurde. |
 | **Heute prüfen** | orange | Heute ist die Kontrolle dran. | Ins Regal schauen, das vorderste MHD ablesen und auf „Geprüft“ tippen. |
 | **Heute reduzieren** | gelb | Die Ware soll jetzt im Preis herabgesetzt werden. | Ware reduzieren, danach auf „Reduziert“ tippen. Der Artikel bleibt hier bis zum Tag vor dem MHD stehen, bis das jemand getan hat, auch wenn er zwischendurch geprüft wurde. |
 | **Ohne Bestand – wieder da?** | grau | Der Artikel war zuletzt nicht im Regal. Die App fragt nach, ob er wieder da ist. Steht dabei „MHD fehlt noch“, wurde der Artikel angelegt, aber sein MHD nie gespeichert. | Nachsehen: Ist er wieder da, tippen Sie „Wieder da“. Sonst „Weiter ohne Bestand“. Bei „MHD fehlt noch“ geben Sie das MHD ein und tippen auf „MHD speichern“. Wurde der Artikel versehentlich angelegt, tippen Sie auf „Aus dem Sortiment nehmen“. |
@@ -223,7 +223,8 @@ Der Wert bei „Prüfen“ steuert außerdem, wann die App bei Artikeln ohne Bes
 nachfragt: nach so vielen Tagen, wie der Prüf-Vorlauf der Warengruppe beträgt,
 mindestens nach einem Tag, aber nie später als bei „Spätestens alle“.
 
-Zusätzlich steht jeder Artikel am Tag seines MHD unter „Läuft heute ab“.
+Zusätzlich steht jeder Artikel am Tag seines MHD unter „Läuft heute ab“, bis die
+Ware aussortiert ist. Das gilt auch, wenn das MHD erst an diesem Tag eingegeben wird.
 
 Beispiel: Molkerei mit 3 und 2 Tagen. Läuft ein Joghurt am 20.11. ab, steht er am
 17.11. unter „Heute prüfen“, am 18.11. unter „Heute reduzieren“ und am 20.11.

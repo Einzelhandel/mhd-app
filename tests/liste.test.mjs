@@ -16,8 +16,8 @@ test('Beispiel aus dem Entwurf: Molkerei 3/2, MHD 20.11.2026', async () => {
   await tag('2026-11-19'); assert.deepEqual(await wo(a), ['abgelaufen', 'reduzieren']);   // versäumt, bleibt stehen
   await tag('2026-11-20'); assert.deepEqual(await wo(a), ['abgelaufen', 'reduzieren']);
   await aktion(a, 'reduziert');
-  assert.deepEqual(await wo(a), [null, null]);            // am MHD-Tag erledigt …
-  await tag('2026-11-21'); assert.deepEqual(await wo(a), ['abgelaufen', 'abgelaufen']);   // … aber Ware blieb im Regal
+  assert.deepEqual(await wo(a), ['laeuft_ab', null]);     // Versäumtes erledigt, die Ware muss heute noch raus
+  await tag('2026-11-21'); assert.deepEqual(await wo(a), ['abgelaufen', 'abgelaufen']);   // Ware blieb im Regal
   await tag('2026-12-24'); assert.deepEqual(await wo(a), ['abgelaufen', 'abgelaufen']);   // fällt nie still weg
   await aktion(a, 'aussortiert'); assert.deepEqual(await wo(a), [null, null]);
 });
