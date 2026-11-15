@@ -100,7 +100,7 @@ begin
       ('4311501492277', 'Haferflocken Kernig',                  '500g',   'Gang 3',      'Trockensortiment',  14,  -5),
       -- "reduzieren" (Fleisch, ohne Strichcode)
       (null,            'Hackfleisch gemischt',                 null,     'Kühltheke',   'Fleisch und Wurst',  1,  -1),
-      -- "ohne Bestand" (Getränke: Prüf-Vorlauf 14 Tage, seit 61 Tagen ohne Bestand)
+      -- "ohne Bestand" (Getränke: Prüf-Vorlauf 30 Tage, seit 61 Tagen ohne Bestand)
       ('4311596435968', 'Mineralwasser medium',                 '1.5l',   'Gang 5',      'Getränke',          null, -61),
       -- übrige: nichts fällig
       ('4311501365359', 'Katenschinken',                        '75g',    'Kühltheke',   'Fleisch und Wurst',  25,  -3),
