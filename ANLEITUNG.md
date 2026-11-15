@@ -91,7 +91,7 @@ Sie sehen das MHD und die Knöpfe.
 | **Läuft heute ab** | orange | Die Ware hat heute ihr MHD. | Ware heute rausnehmen. Danach tippen Sie auf „Aussortiert“. |
 | **Heute prüfen** | orange | Heute ist die Kontrolle dran. | Ins Regal schauen, das vorderste MHD ablesen und auf „Geprüft“ tippen. |
 | **Heute reduzieren** | gelb | Die Ware soll jetzt im Preis herabgesetzt werden. | Ware reduzieren, danach auf „Reduziert“ tippen. |
-| **Ohne Bestand – wieder da?** | grau | Der Artikel war zuletzt nicht im Regal. Die App fragt nach, ob er wieder da ist. Steht dabei „MHD fehlt noch“, wurde der Artikel angelegt, aber sein MHD nie gespeichert. | Nachsehen: Ist er wieder da, tippen Sie „Wieder da“. Sonst „Weiter ohne Bestand“. Bei „MHD fehlt noch“ geben Sie das MHD ein und tippen auf „MHD speichern“. |
+| **Ohne Bestand – wieder da?** | grau | Der Artikel war zuletzt nicht im Regal. Die App fragt nach, ob er wieder da ist. Steht dabei „MHD fehlt noch“, wurde der Artikel angelegt, aber sein MHD nie gespeichert. | Nachsehen: Ist er wieder da, tippen Sie „Wieder da“. Sonst „Weiter ohne Bestand“. Bei „MHD fehlt noch“ geben Sie das MHD ein und tippen auf „MHD speichern“. Wurde der Artikel versehentlich angelegt, tippen Sie auf „Aus dem Sortiment nehmen“. |
 
 Der rote Abschnitt steht immer oben. Ein Artikel fällt nie von allein von der
 Liste. Er bleibt stehen, bis jemand etwas damit gemacht hat.
@@ -146,7 +146,8 @@ Artikel“.
 
 Kommen Sie nicht mehr dazu (zum Beispiel weil das Netz weg war), steht der Artikel
 sofort auf der Liste unter „Ohne Bestand – wieder da?“ mit „MHD fehlt noch“. Wer
-ihn antippt, sieht wieder nur „MHD speichern“.
+ihn antippt, kann das MHD speichern. Wurde der Artikel versehentlich angelegt,
+tippt man stattdessen auf „Aus dem Sortiment nehmen“; dann verschwindet er von der Liste.
 
 ## 8. Abgewogene Ware und Ware ohne Strichcode
 

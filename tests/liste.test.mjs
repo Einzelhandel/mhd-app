@@ -147,6 +147,22 @@ test('neu angelegt, MHD noch nie gespeichert: sofort unter ohne_bestand mit „m
   assert.deepEqual(await wo(a), [null, null]);
 });
 
+test('neu angelegt, MHD nie gespeichert: ruht nimmt ihn von der Liste, geprueft holt ihn zurück', async () => {
+  const { tag, aktion, wo, zeile, neu, db } = await umgebung();
+  await tag('2026-11-14');
+  const a = await neu('Ayran');
+  assert.deepEqual(await wo(a), ['ohne_bestand', 'mhd_fehlt']);
+  const r = await aktion(a, 'ruht');
+  assert.equal(r.aktiv, false);
+  assert.deepEqual(await wo(a), [null, null]);
+  assert.equal((await zeile(a)).aktiv, false);
+  const protokoll = (await db.query('select art from mhd.protokoll where artikel_id = $1', [a])).rows;
+  assert.deepEqual(protokoll.map((p) => p.art), ['ruht']);
+  const z = await aktion(a, 'geprueft', '2026-12-20');
+  assert.equal(z.aktiv, true);
+  assert.equal(z.bestand, true);
+});
+
 test('Demo-Daten: weiterhin alle fünf Abschnitte gefüllt, kein Artikel mit „mhd_fehlt“', async () => {
   const db = await neueDatenbank();
   await heuteSetzen(db, '2026-11-16');

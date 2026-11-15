@@ -15,7 +15,7 @@ export function schritte(art, feldText, artikel, heute) {
   return [{ art: 'geprueft', mhd }, { art }];
 }
 
-// Welche Knöpfe der Artikel anbietet: 'neu' (MHD noch nie gespeichert: nur das MHD der vordersten Ware speichern),
+// Welche Knöpfe der Artikel anbietet: 'neu' (MHD noch nie gespeichert: MHD der vordersten Ware speichern oder aus dem Sortiment nehmen),
 // 'ohne_bestand' (ruhend oder ohne Bestand: wieder da, weiter ohne Bestand, aus dem Sortiment nehmen) oder 'bestand'.
 // 'neu' folgt aus dem Zustand des Artikels (versaeumt 'mhd_fehlt' vom Server), egal ob er gerade angelegt,
 // gescannt oder aus der Liste geöffnet wurde; `neu` aus den Ansichtsdaten gilt zusätzlich, nur ohne Bestand.

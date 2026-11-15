@@ -56,9 +56,9 @@ export default [
       let a = await h.artikel('Testbrot');
       h.gleich([a.ean, a.quelle, a.gruppe, a.bestand], ['4000000000006', 'hand', 'Backwaren', false], 'DB: Artikel angelegt');
 
-      // Ein neuer Artikel: Hinweis, ein Knopf „MHD speichern“, keine Knöpfe für „ohne Bestand“.
+      // Ein neuer Artikel: Hinweis, „MHD speichern“ und „Aus dem Sortiment nehmen“, keine Knöpfe für „ohne Bestand“.
       h.gleich(await h.text('.ansicht-artikel .frage'), 'Neuer Artikel – bitte das vorderste MHD eingeben.', 'Hinweis zum neuen Artikel');
-      h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern'], 'nur der Knopf „MHD speichern“');
+      h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern', 'Aus dem Sortiment nehmen'], 'nur „MHD speichern“ und „Aus dem Sortiment nehmen“');
       h.pruefe(!(await h.text('.ansicht-artikel')).includes('Wieder da'), 'kein „Wieder da“');
       await h.foto('neu-mhd');
       await h.passtInsFenster('Neuer Artikel nach dem Anlegen');
@@ -89,7 +89,7 @@ export default [
       await h.knopf('Speichern', '.ansicht-artikel-neu');
       await h.warteAnsicht('artikel');
       await h.ruhe();
-      h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern'], 'zweiter neuer Artikel: nur „MHD speichern“');
+      h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern', 'Aus dem Sortiment nehmen'], 'zweiter neuer Artikel: beide Knöpfe');
       await h.knopf('Zurück', '.ansicht-artikel');
       await h.warteListe();
       const ohne = (await h.liste()).find((x) => x.schluessel === 'ohne_bestand');
@@ -99,14 +99,37 @@ export default [
       await h.foto('mhd-fehlt');
       await h.oeffneAusListe('ohne_bestand', 'Testsemmel');
       h.gleich(await h.text('.ansicht-artikel .frage'), 'Neuer Artikel – bitte das vorderste MHD eingeben.', 'aus der Liste: Hinweis zum neuen Artikel');
-      h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern'], 'aus der Liste: nur der Knopf „MHD speichern“');
+      h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern', 'Aus dem Sortiment nehmen'], 'aus der Liste: „MHD speichern“ und „Aus dem Sortiment nehmen“');
       h.gleich(await h.text('.ansicht-artikel .status-gross'), 'MHD fehlt noch', 'Status im Artikel');
+      await h.passtInsFenster('Artikel „MHD fehlt noch“');
       await h.mhdEintippen(tag(5));
       await h.knopf('MHD speichern', '.ansicht-artikel');
       await h.warteListe();
       h.pruefe(!(await h.alleNamen()).includes('Testsemmel'), 'nach dem Speichern nicht mehr auf der Liste', await h.alleNamen());
       a = await h.artikel('Testsemmel');
       h.gleich([a.mhd, a.bestand], [tag(5), true], 'DB: MHD gespeichert, Bestand');
+
+      // Versehentlich angelegt: „MHD fehlt noch“ lässt sich aus dem Sortiment nehmen.
+      await h.knopf('Scannen', '.ansicht-liste');
+      await h.warteAnsicht('scan');
+      await c.tippe('#ean', '4000000000020', { enter: true });
+      await h.warteAnsicht('artikel-neu');
+      await c.warteAuf(() => document.getElementById('name'), { text: 'Formular Neuer Artikel' });
+      await c.tippe('#name', 'Testkeks');
+      await h.waehleOption('#warengruppe', 'Backwaren');
+      await h.knopf('Speichern', '.ansicht-artikel-neu');
+      await h.warteAnsicht('artikel');
+      await h.ruhe();
+      await h.knopf('Zurück', '.ansicht-artikel');
+      await h.warteListe();
+      await h.oeffneAusListe('ohne_bestand', 'Testkeks');
+      h.gleich(await h.knopfTexte('.ansicht-artikel .bereich'), ['MHD speichern', 'Aus dem Sortiment nehmen'], 'Testkeks: beide Knöpfe');
+      await h.knopf('Aus dem Sortiment nehmen', '.ansicht-artikel');
+      await h.warteListe();
+      h.pruefe(!(await h.alleNamen()).includes('Testkeks'), 'nach „Aus dem Sortiment nehmen“ nicht mehr auf der Liste', await h.alleNamen());
+      a = await h.artikel('Testkeks');
+      h.gleich(a.aktiv, false, 'DB: Artikel ruht');
+      h.gleich((await h.protokoll('Testkeks')).map((p) => p.art), ['ruht'], 'DB: Protokollzeile „ruht“');
     },
   },
   {

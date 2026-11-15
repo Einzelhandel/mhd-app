@@ -119,7 +119,7 @@ ansichten.artikel = async (wurzel, daten) => {
         if (iso) pruefeAbgelaufen(iso, () => aktion('geprueft', iso, 'MHD gespeichert.'));
       };
       zeigePanel([element('p', { class: 'frage' }, 'Neuer Artikel – bitte das vorderste MHD eingeben.'), feld.zeile],
-        [knopf('MHD speichern', speichern, 'haupt')], speichern);
+        [knopf('MHD speichern', speichern, 'haupt'), knopf('Aus dem Sortiment nehmen', () => aktion('ruht'))], speichern);
       return;
     }
     if (art === 'ohne_bestand') {
