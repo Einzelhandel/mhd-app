@@ -6,16 +6,26 @@
 -- in Supabase Auth.
 --   select mhd.demo_einrichten('demo@example.com', '<Leitungs-PIN>');  -- erstes Mal
 --   select mhd.demo_einrichten('demo@example.com');    -- Zurücksetzen (z. B. täglich)
+-- Für eine Demo im Internet die PIN von Anna und Ben als dritten Parameter mitgeben,
+-- bei jedem Aufruf, auch beim Zurücksetzen:
+--   select mhd.demo_einrichten('demo@example.com', '<Leitungs-PIN>', '<Mitarbeiter-PIN>');
+--   select mhd.demo_einrichten('demo@example.com', null, '<Mitarbeiter-PIN>');
 -- Das Zurücksetzen löscht Artikel und Protokoll des Demo-Markts (und nur dieses)
 -- und legt sie neu an. Auch die Warengruppen stehen danach wieder auf den
 -- Startwerten. Sperren werden aufgehoben, die PIN von Anna und Ben ist danach
--- wieder 1234. Die Leitungs-PIN ändert sich nur, wenn p_leitung_pin gesetzt ist.
+-- die in p_mitarbeiter_pin übergebene, ohne Angabe wieder 1234.
+-- Die Leitungs-PIN ändert sich nur, wenn p_leitung_pin gesetzt ist.
 -- Alle Daten sind relativ zu mhd.heute().
 -- Produktnamen und Mengen sind die öffentlichen Angaben aus Open Food Facts.
 
 begin;
 
-create or replace function mhd.demo_einrichten(p_email text, p_leitung_pin text default null)
+-- Die Parameter haben sich geändert: die ältere Fassung mit zwei Parametern entfernen, sonst
+-- bliebe sie neben der neuen bestehen und Aufrufe wären mehrdeutig.
+drop function if exists mhd.demo_einrichten(text, text);
+
+create or replace function mhd.demo_einrichten(
+  p_email text, p_leitung_pin text default null, p_mitarbeiter_pin text default '1234')
 returns void
 language plpgsql
 set search_path = ''
@@ -37,8 +47,8 @@ begin
   end if;
 
   insert into mhd.mitarbeiter (markt_id, name, rolle, pin_hash)
-  values (v_markt, 'Anna', 'mitarbeiter', mhd.pin_hash('1234')),
-         (v_markt, 'Ben',  'mitarbeiter', mhd.pin_hash('1234'))
+  values (v_markt, 'Anna', 'mitarbeiter', mhd.pin_hash(coalesce(p_mitarbeiter_pin, '1234'))),
+         (v_markt, 'Ben',  'mitarbeiter', mhd.pin_hash(coalesce(p_mitarbeiter_pin, '1234')))
   on conflict (markt_id, name) do update
     set rolle = 'mitarbeiter', aktiv = true, pin_hash = excluded.pin_hash;
 
@@ -113,6 +123,6 @@ end;
 $$;
 
 -- Nur der Datenbank-Eigentümer (SQL-Editor, Zeitplan) darf zurücksetzen, nie ein Browser-Konto.
-revoke all on function mhd.demo_einrichten(text, text) from public, anon, authenticated;
+revoke all on function mhd.demo_einrichten(text, text, text) from public, anon, authenticated;
 
 commit;

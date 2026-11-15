@@ -189,7 +189,7 @@ test('demo_einrichten ist für anon und authenticated nicht aufrufbar', async ()
   for (const rolle of ['anon', 'authenticated']) {
     await assert.rejects(als(s.db, rolle, u, "select mhd.demo_einrichten('demo@example.com')"), /permission denied/);
     const r = await s.db.query(
-      "select has_function_privilege($1, 'mhd.demo_einrichten(text, text)', 'execute') as ok", [rolle]);
+      "select has_function_privilege($1, 'mhd.demo_einrichten(text, text, text)', 'execute') as ok", [rolle]);
     assert.equal(r.rows[0].ok, false, rolle);
   }
 });

@@ -204,6 +204,15 @@ Außerdem:
   Protokoll, Warengruppen, Sperren, PINs von Anna und Ben): derselbe Aufruf ohne
   PIN, `select mhd.demo_einrichten('demo@example.com');`; die Leitungs-PIN bleibt
   dann unverändert. Dies löscht nur die Daten des Demo-Markts.
+
+  Ohne weitere Angabe haben Anna und Ben die PIN `1234`. Für eine Demo im
+  Internet eine eigene PIN als dritten Parameter mitgeben, und zwar bei
+  **jedem** Aufruf, auch beim Zurücksetzen, sonst gilt danach wieder `1234`:
+
+  ```
+  select mhd.demo_einrichten('demo@example.com', '<Leitungs-PIN>', '<Mitarbeiter-PIN>');
+  select mhd.demo_einrichten('demo@example.com', null, '<Mitarbeiter-PIN>');  -- Zurücksetzen
+  ```
 - Wer Supabase nicht nutzen will: Die Fachlogik ist reines PostgreSQL; die
   Oberfläche spricht nur eine PostgREST-ähnliche Schnittstelle an. Ob ein Betrieb
   mit selbst gehostetem Supabase oder PostgreSQL mit PostgREST ohne Änderungen
