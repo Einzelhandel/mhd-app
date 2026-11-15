@@ -23,14 +23,11 @@ Voraussetzung: Git und Node.js ab Version 22. Alle Befehle für die
 Eingabeaufforderung von Windows (cmd.exe):
 
 ```
-git clone https://github.com/<organisation>/mhd-app.git
+git clone https://github.com/Einzelhandel/mhd-app.git
 cd /d mhd-app
 npm install
 npm start
 ```
-
-`<organisation>` ist ein Platzhalter und durch die tatsächliche Adresse des
-Repositorys zu ersetzen.
 
 Der Server meldet `http://127.0.0.1:8123/`; ebenso geht
 `http://localhost:8123/`. Diese Adresse im Browser öffnen. Der Testserver führt
